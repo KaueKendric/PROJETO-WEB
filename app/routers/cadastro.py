@@ -1,31 +1,33 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 
-from app.models.cadastro import Cadastro
+from sqlalchemy.orm import Session
+
+from app.database import models
+from app.database.database import get_db
+from app.schemas import cadastro as cadastro_schema 
 
 router = APIRouter(
-    
     prefix="/cadastros",
-    tags=["cadastros"]
+    tags=["cadastros"],
 )
 
-cadastros = []
-contador_cadastro_id = 1
+@router.post("/", response_model=cadastro_schema.Cadastro, status_code=201)
+async def criar_cadastro(cadastro: cadastro_schema.Cadastro, db: Session = Depends(get_db)):
+    db_cadastro = models.Cadastro(**cadastro.model_dump())
+    db.add(db_cadastro)
+    db.commit()
+    db.refresh(db_cadastro)
+    return db_cadastro
 
-@router.post("/", response_model=Cadastro, status_code=201)
-async def criar_cadastro(cadastro: Cadastro):
-    global contador_cadastro_id
-    cadastro_com_id = cadastro.model_copy(update={"id": contador_cadastro_id})
-    cadastros.append(cadastro_com_id)
-    contador_cadastro_id+= 1
-    return cadastro_com_id
-@router.get("/", response_model=List[Cadastro])
-async def listar_cadastros():
+@router.get("/", response_model=List[cadastro_schema.Cadastro])
+async def listar_cadastros(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    cadastros = db.query(models.Cadastro).offset(skip).limit(limit).all()
     return cadastros
 
-@router.get("/{cadastro_id}", response_model=Cadastro)
-async def obter_cadastro(cadastro_id: int):
-    for cadastro in cadastros:
-        if cadastro.id == cadastro_id:
-            return cadastro
-    raise HTTPException(status_code=404, detail="Cadastro não encontrado")
+@router.get("/{cadastro_id}", response_model=cadastro_schema.Cadastro)
+async def obter_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
+    db_cadastro = db.query(models.Cadastro).filter(models.Cadastro.id == cadastro_id).first()
+    if db_cadastro is None:
+        raise HTTPException(status_code=404, detail="Cadastro não encontrado")
+    return db_cadastro

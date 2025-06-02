@@ -1,32 +1,33 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 
-from app.models.agendamento import Agendamento 
+from sqlalchemy.orm import Session
 
-router = APIRouter (
-    
-    prefix= "/agendamentos",
-    tags= ["agendamentos"]   
-     
+from app.database import models
+from app.database.database import get_db
+from app.schemas import agendamento as agendamento_schema
+
+router = APIRouter(
+    prefix="/agendamentos",
+    tags=["agendamentos"],
 )
 
-agendamentos = []
-contador_agendamento_id = 1
+@router.post("/", response_model=agendamento_schema.Agendamento, status_code=201)
+async def criar_agendamento(agendamento: agendamento_schema.Agendamento, db: Session = Depends(get_db)):
+    db_agendamento = models.Agendamento(**agendamento.model_dump())
+    db.add(db_agendamento)
+    db.commit()
+    db.refresh(db_agendamento)
+    return db_agendamento
 
-@router.post("/", response_model=Agendamento, status_code=201)
-async def criar_agendamento(agendamento: Agendamento):
-    global contador_agendamento_id
-    agendamento_com_id = agendamento.model_copy(update={"id": contador_agendamento_id})
-    agendamentos.append(agendamento_com_id)
-    contador_agendamento_id += 1 
-    return agendamento_com_id
- 
-@router.get("/", response_model=List[Agendamento])
-async def lista_agendamentos():
+@router.get("/", response_model=List[agendamento_schema.Agendamento])
+async def listar_agendamentos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    agendamentos = db.query(models.Agendamento).offset(skip).limit(limit).all()
     return agendamentos
-@router.get("/{agendamento_id}", response_model=Agendamento)
-async def obter_agendamento(agendamento_id: int):
-    for agendamento in agendamentos:
-        if agendamento.id == agendamento_id:
-            return agendamento
-    raise HTTPException(status_code=404, detail="Agendamento não encontrado")
+
+@router.get("/{agendamento_id}", response_model=agendamento_schema.Agendamento)
+async def obter_agendamento(agendamento_id: int, db: Session = Depends(get_db)):
+    db_agendamento = db.query(models.Agendamento).filter(models.Agendamento.id == agendamento_id).first()
+    if db_agendamento is None:
+        raise HTTPException(status_code=404, detail="Agendamento não encontrado")
+    return db_agendamento
