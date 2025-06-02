@@ -25,7 +25,7 @@ __pycache__/
 
 # Arquivos de Ambiente e Segredos (MUITO IMPORTANTE!)
 .env
-.env.*
+.env.
 *.env
 
 # Banco de Dados SQLite (se você não quiser versionar o banco de dados de desenvolvimento)
