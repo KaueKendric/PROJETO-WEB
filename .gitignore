@@ -1,0 +1,60 @@
+
+# Ambiente Virtual
+.venv/
+venv/
+env/
+ENV/
+
+# Arquivos de Bytecode e Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos de IDEs e Editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.bak
+*.swp
+
+# Arquivos de Ambiente e Segredos (MUITO IMPORTANTE!)
+.env
+.env.*
+*.env
+
+# Banco de Dados SQLite (se você não quiser versionar o banco de dados de desenvolvimento)
+db.sqlite3
+*.sqlite3
+
+# Arquivos de Log
+*.log
+logs/
+
+# Arquivos de Cobertura de Testes
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# Distribuição / Build
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos de Mídia (se forem uploads de usuários e não parte do código)
+# media/
+
+# Arquivos estáticos coletados (se você não versiona a pasta de staticfiles da produção)
+# staticfiles/
