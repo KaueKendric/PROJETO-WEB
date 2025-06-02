@@ -12,7 +12,7 @@ router = APIRouter(
 cadastros = []
 contador_cadastro_id = 1
 
-@router.post("/, response_model=Cadastro", status_code=201)
+@router.post("/", response_model=Cadastro, status_code=201)
 async def criar_cadastro(cadastro: Cadastro):
     global contador_cadastro_id
     cadastro_com_id = cadastro.model_copy(update={"id": contador_cadastro_id})

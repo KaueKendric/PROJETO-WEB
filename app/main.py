@@ -8,4 +8,4 @@ app.include_router(agendamento.router)
 
 @app.get("/")
 async def root():
-    return {"message": "API para Controle de Cadastramento e Agendamento"}
+    return {"message": "API para Controle de Cadastro e Agendamento"}
