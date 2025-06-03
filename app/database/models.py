@@ -3,8 +3,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database.database import Base
-
-#Config das tabelas do bd
 class Cadastro(Base):
     __tablename__ = "cadastros"
 
@@ -16,6 +14,18 @@ class Cadastro(Base):
     endereco = Column(String)
 
     agendamentos = relationship("Agendamento", back_populates="cadastro")
+    funcionario = relationship("Funcionario", back_populates="cadastro")
+
+class Funcionario(Base):
+    __tablename__ = "funcionarios"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, nullable=False)
+    especialidade = Column(String)
+    cadastro_id = Column(Integer, ForeignKey("cadastros.id"))
+
+    agendamentos = relationship("Agendamento", back_populates="funcionario")
+    cadastro = relationship("Cadastro", back_populates="funcionario")
 
 class Agendamento(Base):
     __tablename__ = "agendamentos"
@@ -28,8 +38,9 @@ class Agendamento(Base):
     observacoes = Column(String)
     duracao_em_minutos = Column(Integer)
     local = Column(String)
-    profissional_responsavel_id = Column(Integer)
+    profissional_responsavel_id = Column(Integer, ForeignKey("funcionarios.id")) 
     data_criacao = Column(DateTime, default=func.now())
     data_atualizacao = Column(DateTime, default=func.now(), onupdate=func.now())
 
     cadastro = relationship("Cadastro", back_populates="agendamentos")
+    funcionario = relationship("Funcionario", back_populates="agendamentos")
