@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import models
 from app.database.database import get_db
-from app.schemas import cadastro as cadastro_schema 
+from app.schemas import cadastro as cadastro_schema
 
 router = APIRouter(
     prefix="/cadastros",
@@ -22,8 +22,11 @@ async def criar_cadastro(cadastro: cadastro_schema.Cadastro, db: Session = Depen
 
 @router.get("/", response_model=List[cadastro_schema.Cadastro])
 async def listar_cadastros(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    cadastros = db.query(models.Cadastro).offset(skip).limit(limit).all()
-    return cadastros
+    cadastros_db = db.query(models.Cadastro).offset(skip).limit(limit).all()
+    cadastros_schema_list = []
+    for cadastro in cadastros_db:
+        cadastros_schema_list.append(cadastro_schema.Cadastro.from_orm(cadastro))
+    return cadastros_schema_list
 
 @router.get("/{cadastro_id}", response_model=cadastro_schema.Cadastro)
 async def obter_cadastro(cadastro_id: int, db: Session = Depends(get_db)):

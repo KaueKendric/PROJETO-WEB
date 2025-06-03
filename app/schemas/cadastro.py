@@ -40,3 +40,4 @@ class Cadastro(BaseModel):
         if isinstance(obj, (datetime.date, datetime.datetime)):
             return obj.strftime('%d-%m-%Y')
         raise TypeError(f'Type {type(obj)} not serializable')
+    

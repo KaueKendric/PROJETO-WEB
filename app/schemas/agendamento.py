@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 class Agendamento(BaseModel):
+    id: Optional[int] = None 
     usuario_id: int
     data_hora: datetime
     tipo_sessao: str
