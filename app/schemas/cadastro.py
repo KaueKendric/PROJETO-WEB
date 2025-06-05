@@ -4,6 +4,7 @@ from datetime import date
 import datetime
 
 class Cadastro(BaseModel):
+    id: Optional[int] = None  # Certifique-se de que esta linha está presente
     nome: str
     email: str
     telefone: str
@@ -30,14 +31,3 @@ class Cadastro(BaseModel):
                 "endereco": "Seu Endereço"
             }
         }
-
-    def json(self, *args, **kwargs):
-        kwargs['default'] = self.json_serial
-        return super().json(*args, **kwargs)
-
-    @staticmethod
-    def json_serial(obj):
-        if isinstance(obj, (datetime.date, datetime.datetime)):
-            return obj.strftime('%d-%m-%Y')
-        raise TypeError(f'Type {type(obj)} not serializable')
-    

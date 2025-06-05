@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import cadastro, agendamento, funcionario
+from app.routers import cadastro, agendamento, funcionario, auth # Importe o novo router
 from dotenv import load_dotenv
 import os
 
@@ -23,7 +23,4 @@ app.add_middleware(
 app.include_router(cadastro.router)
 app.include_router(agendamento.router)
 app.include_router(funcionario.router)
-
-@app.get("/")
-async def root():
-    return {"message": "API para Controle de Cadastro e Agendamento"}
+app.include_router(auth.router) 

@@ -27,7 +27,7 @@ function ListaCadastro(){
             {cadastros.length > 0 ? (
                 <ul>
                     {cadastros.map((cadastro) => (
-                        <li key={cadastro.id}>{cadastro.nome}(ID: {cadastro.id})</li>
+                        <li key={cadastro.id}>{cadastro.nome} (ID: {cadastro.id})</li>
                     ))}
                 </ul>
             ) : (
