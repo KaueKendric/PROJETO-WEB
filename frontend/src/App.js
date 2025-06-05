@@ -4,6 +4,7 @@ import CriarCadastro from './components/CriarCadastro';
 import ObterCadastro from './components/ObterCadastro';
 import Login from './components/Login'; 
 import './App.css';
+import './styles.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState('listar');
