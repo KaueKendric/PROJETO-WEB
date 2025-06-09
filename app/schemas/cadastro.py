@@ -15,9 +15,9 @@ class Cadastro(BaseModel):
     def parse_data_nascimento(cls, value):
         if isinstance(value, str):
             try:
-                return datetime.datetime.strptime(value, '%d-%m-%Y').date()
+                return datetime.datetime.strptime(value, '%d/%m/%Y').date()
             except ValueError:
-                raise ValueError("O formato da data de nascimento deve ser DD-MM-AAAA")
+                raise ValueError("O formato da data de nascimento deve ser DD/MM/AAAA")
         return value
 
     class Config:
@@ -27,7 +27,7 @@ class Cadastro(BaseModel):
                 "nome": "Seu Nome",
                 "email": "seu_email@exemplo.com",
                 "telefone": "99999999",
-                "data_nascimento": "16-12-2003",
+                "data_nascimento": "16/12/2003",
                 "endereco": "Seu Endereço"
             }
         }
