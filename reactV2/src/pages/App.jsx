@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Importações das páginas
-import LoginPage from '../pages/LoginPage';
-import DashboardPage from '../pages/DashboardPage';
-import CadastroPage from '../pages/CadastroPage';
-import AgendamentoPage from '../pages/AgendamentoPage';
+import LoginPage from './LoginPage';
+import DashboardPage from './DashboardPage';
+import CadastroPage from './CadastroPage';
+import AgendamentoPage from './AgendamentoPage';
 
 // Componente de rota protegida
 function ProtectedRoute({ children, isLoggedIn }) {

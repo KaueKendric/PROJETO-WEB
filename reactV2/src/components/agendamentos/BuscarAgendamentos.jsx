@@ -51,6 +51,7 @@ function BuscarAgendamento() {
   };
 
   const buscarAgendamentos = async () => {
+    const API_URL = import.meta.env.VITE_API_URL;
     if (!searchTerm.trim() && !filtroData && !filtroTipo) {
       setErro('Por favor, preencha pelo menos um campo de busca.');
       return;
@@ -67,7 +68,7 @@ function BuscarAgendamento() {
 
       if (isNumeric && searchTerm.trim()) {
         // Busca por ID específico
-        const response = await fetch(`http://localhost:8000/agendamentos/${searchTerm.trim()}`);
+        const response = await fetch(`${API_URL}/agendamentos/${searchTerm.trim()}`);
         if (response.status === 404) {
           throw new Error('Agendamento não encontrado com este ID.');
         }
@@ -77,7 +78,7 @@ function BuscarAgendamento() {
         data = [await response.json()];
       } else {
         // Busca geral com filtros
-        const response = await fetch('http://localhost:8000/agendamentos/');
+        const response = await fetch('${API_URL}/agendamentos/');
         if (!response.ok) {
           throw new Error('Erro ao buscar lista de agendamentos.');
         }

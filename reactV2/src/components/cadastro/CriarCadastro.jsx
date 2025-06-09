@@ -12,6 +12,7 @@ function CriarCadastro() {
   const [mensagem, setMensagem] = useState('');
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const formatarTelefone = (valor) => {
     const apenasNumeros = valor.replace(/\D/g, '');
@@ -47,7 +48,7 @@ function CriarCadastro() {
     setCarregando(true);
     
     try {
-      const response = await fetch('http://localhost:8000/cadastros/', {
+      const response = await fetch(`${API_URL}/cadastros/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

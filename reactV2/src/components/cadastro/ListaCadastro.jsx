@@ -5,11 +5,12 @@ function ListaCadastro() {
   const [cadastros, setCadastros] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     const fetchCadastros = async () => {
       try {
-        const response = await fetch('http://localhost:8000/cadastros/');
+        const response = await fetch(`${API_URL}/cadastros/`);
         if (!response.ok) {
           throw new Error('Erro ao buscar cadastros');
         }

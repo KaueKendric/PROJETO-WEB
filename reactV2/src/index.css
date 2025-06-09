@@ -1,8 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-@import '../src/styles/Login.css';
-
+@import "tailwindcss";
+@import "../src/styles/Login.css";
 
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -19,21 +16,9 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  overflow-x: hidden;
-}
-
 @media (prefers-color-scheme: light) {
   :root {
-    color: #80bdf1;
+    color: #213547;
     background-color: #ffffff;
   }
 

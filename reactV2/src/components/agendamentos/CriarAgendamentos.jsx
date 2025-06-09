@@ -15,6 +15,7 @@ function CriarAgendamento() {
   const [mensagem, setMensagem] = useState('');
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const tiposAgendamento = [
     { value: 'reuniao', label: 'Reunião' },
@@ -43,17 +44,17 @@ function CriarAgendamento() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/agendamentos/', {
+      const response = await fetch(`${API_URL}/agendamentos/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Erro ao criar agendamento');
       }
-      
+
       const data = await response.json();
       setMensagem(`Agendamento criado com sucesso! ID: ${data.id}`);
       setFormData({
@@ -78,14 +79,14 @@ function CriarAgendamento() {
       <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
         <Plus className="text-green-400" /> Criar Novo Agendamento
       </h2>
-      
+
       {mensagem && (
         <div className="mb-6 p-4 rounded-xl flex items-center gap-3 bg-green-100 border border-green-300 text-green-800">
           <Check />
           <span>{mensagem}</span>
         </div>
       )}
-      
+
       {erro && (
         <div className="mb-6 p-4 rounded-xl flex items-center gap-3 bg-red-100 border border-red-300 text-red-800">
           <X />
@@ -95,7 +96,7 @@ function CriarAgendamento() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+
           {/* Título */}
           <div className="md:col-span-2">
             <label className="block text-sm font-semibold mb-2 text-slate-300">
@@ -230,7 +231,7 @@ function CriarAgendamento() {
             placeholder="Descreva os detalhes do agendamento..."
           />
         </div>
-        
+
         <div className="flex justify-end">
           <button
             type="submit"

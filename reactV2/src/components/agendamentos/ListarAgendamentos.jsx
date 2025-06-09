@@ -7,6 +7,7 @@ function ListaAgendamento() {
   const [erro, setErro] = useState('');
   const [filtro, setFiltro] = useState('todos');
   const [agendamentoSelecionado, setAgendamentoSelecionado] = useState(null);
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const tiposFiltro = [
     { value: 'todos', label: 'Todos' },
@@ -51,7 +52,7 @@ function ListaAgendamento() {
   useEffect(() => {
     const fetchAgendamentos = async () => {
       try {
-        const response = await fetch('http://localhost:8000/agendamentos/');
+        const response = await fetch(`${API_URL}/agendamentos/`);
         if (!response.ok) {
           throw new Error('Erro ao buscar agendamentos');
         }

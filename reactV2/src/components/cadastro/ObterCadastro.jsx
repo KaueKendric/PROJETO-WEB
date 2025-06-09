@@ -7,6 +7,7 @@ function ObterCadastro() {
   const [cadastroSelecionado, setCadastroSelecionado] = useState(null);
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const buscarDados = async () => {
     if (!searchTerm.trim()) {
@@ -25,7 +26,7 @@ function ObterCadastro() {
 
       if (isNumeric) {
         // Busca por ID específico
-        const response = await fetch(`http://localhost:8000/cadastros/${searchTerm.trim()}`);
+        const response = await fetch(`${API_URL}/cadastros/${searchTerm.trim()}`);
         if (response.status === 404) {
           throw new Error('Cadastro não encontrado com este ID.');
         }
@@ -35,7 +36,7 @@ function ObterCadastro() {
         data = [await response.json()];
       } else {
         // Busca por nome
-        const response = await fetch('http://localhost:8000/cadastros/');
+        const response = await fetch(`${API_URL}/cadastros/`);
         if (!response.ok) {
           throw new Error('Erro ao buscar lista de cadastros.');
         }

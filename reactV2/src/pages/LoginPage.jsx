@@ -12,6 +12,7 @@ function LoginPage({ onLogin }) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     setMounted(true);
@@ -41,7 +42,7 @@ function LoginPage({ onLogin }) {
     console.log("Tentativa de login com:", { username, password });
 
     try {
-      const response = await fetch('http://localhost:8000/login/', {
+      const response = await fetch(`${API_URL}/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
