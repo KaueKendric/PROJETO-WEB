@@ -1,305 +1,383 @@
-import { useState } from 'react';
-import { Plus, Calendar, Clock, MapPin, Users, FileText, Check, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Calendar, Clock, MapPin, Users, Plus, X, Check, Search, AlertCircle, Save } from 'lucide-react';
 
 function CriarAgendamento() {
-  const [formData, setFormData] = useState({
+  const [agendamento, setAgendamento] = useState({
     titulo: '',
-    descricao: '',
     data: '',
-    hora_inicio: '',
-    hora_fim: '',
+    hora: '',
     local: '',
-    participantes: '',
-    tipo: 'reuniao'
+    descricao: '',
+    participantes: []
   });
-  const [mensagem, setMensagem] = useState('');
-  const [erro, setErro] = useState('');
-  const [carregando, setCarregando] = useState(false);
 
-  const tiposAgendamento = [
-    { value: 'reuniao', label: 'Reunião', color: '#3b82f6' },
-    { value: 'consulta', label: 'Consulta', color: '#10b981' },
-    { value: 'evento', label: 'Evento', color: '#8b5cf6' },
-    { value: 'compromisso', label: 'Compromisso Pessoal', color: '#f59e0b' },
-    { value: 'outros', label: 'Outros', color: '#6b7280' }
-  ];
+  const [cadastros, setCadastros] = useState([]);
+  const [carregandoCadastros, setCarregandoCadastros] = useState(true);
+  const [buscaParticipante, setBuscaParticipante] = useState('');
+  const [mostrarListaParticipantes, setMostrarListaParticipantes] = useState(false);
+  const [carregandoSalvar, setCarregandoSalvar] = useState(false);
+  const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  const inputParticipanteRef = useRef(null);
+  const listaParticipantesRef = useRef(null);
+
+  // Buscar cadastros do backend
+  useEffect(() => {
+    const fetchCadastros = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/cadastros/');
+        if (!response.ok) {
+          throw new Error('Erro ao buscar cadastros');
+        }
+        const data = await response.json();
+        setCadastros(data);
+      } catch (error) {
+        console.error('Erro ao buscar cadastros:', error);
+        setMensagem({ tipo: 'erro', texto: 'Erro ao carregar lista de pessoas cadastradas' });
+      } finally {
+        setCarregandoCadastros(false);
+      }
+    };
+
+    fetchCadastros();
+  }, []);
+
+  // Fechar lista ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (listaParticipantesRef.current && !listaParticipantesRef.current.contains(event.target)) {
+        setMostrarListaParticipantes(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filtrar cadastros para busca de participantes
+  const cadastrosFiltrados = cadastros.filter(cadastro =>
+    !agendamento.participantes.some(p => p.id === cadastro.id) &&
+    (cadastro.nome.toLowerCase().includes(buscaParticipante.toLowerCase()) ||
+     cadastro.email.toLowerCase().includes(buscaParticipante.toLowerCase()))
+  );
+
+  const handleInputChange = (campo, valor) => {
+    setAgendamento(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMensagem('');
-    setErro('');
-    setCarregando(true);
+  const adicionarParticipante = (cadastro) => {
+    setAgendamento(prev => ({
+      ...prev,
+      participantes: [...prev.participantes, cadastro]
+    }));
+    setBuscaParticipante('');
+    setMostrarListaParticipantes(false);
+  };
 
-    // Validação básica
-    if (formData.hora_fim <= formData.hora_inicio) {
-      setErro('A hora de fim deve ser posterior à hora de início.');
-      setCarregando(false);
-      return;
+  const removerParticipante = (id) => {
+    setAgendamento(prev => ({
+      ...prev,
+      participantes: prev.participantes.filter(p => p.id !== id)
+    }));
+  };
+
+  const validarFormulario = () => {
+    if (!agendamento.titulo.trim()) {
+      setMensagem({ tipo: 'erro', texto: 'O título é obrigatório' });
+      return false;
     }
+    if (!agendamento.data) {
+      setMensagem({ tipo: 'erro', texto: 'A data é obrigatória' });
+      return false;
+    }
+    if (!agendamento.hora) {
+      setMensagem({ tipo: 'erro', texto: 'A hora é obrigatória' });
+      return false;
+    }
+    return true;
+  };
+
+  const salvarAgendamento = async () => {
+    if (!validarFormulario()) return;
+
+    setCarregandoSalvar(true);
+    setMensagem({ tipo: '', texto: '' });
 
     try {
+      const dadosAgendamento = {
+        titulo: agendamento.titulo,
+        data: agendamento.data,
+        hora: agendamento.hora,
+        local: agendamento.local,
+        descricao: agendamento.descricao,
+        participantes_ids: agendamento.participantes.map(p => p.id)
+      };
+
       const response = await fetch('http://localhost:8000/agendamentos/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dadosAgendamento)
       });
-      
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Erro ao criar agendamento');
+        throw new Error('Erro ao salvar agendamento');
       }
+
+      setMensagem({ tipo: 'sucesso', texto: 'Agendamento criado com sucesso!' });
       
-      const data = await response.json();
-      setMensagem(`Agendamento criado com sucesso! ID: ${data.id}`);
-      setFormData({
+      // Limpar formulário
+      setAgendamento({
         titulo: '',
-        descricao: '',
         data: '',
-        hora_inicio: '',
-        hora_fim: '',
+        hora: '',
         local: '',
-        participantes: '',
-        tipo: 'reuniao'
+        descricao: '',
+        participantes: []
       });
+
     } catch (error) {
-      setErro(`Erro ao criar agendamento: ${error.message}`);
+      console.error('Erro ao salvar agendamento:', error);
+      setMensagem({ tipo: 'erro', texto: 'Erro ao salvar agendamento. Tente novamente.' });
     } finally {
-      setCarregando(false);
+      setCarregandoSalvar(false);
     }
   };
 
-  const tipoSelecionado = tiposAgendamento.find(t => t.value === formData.tipo);
-
   return (
-    <div className="w-full">
+    <div className="w-full max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
         <Plus className="text-green-400" size={28} />
-        Criar Novo Agendamento
+        Novo Agendamento
       </h2>
-      
-      {mensagem && (
-        <div className="mb-6 p-4 rounded-2xl flex items-center gap-3 bg-green-500/20 border border-green-400/30 text-green-300 backdrop-blur-sm">
-          <Check size={20} />
-          <span className="font-medium">{mensagem}</span>
+
+      {/* Mensagens */}
+      {mensagem.texto && (
+        <div className={`mb-6 p-4 rounded-2xl border backdrop-blur-sm flex items-center gap-3 ${
+          mensagem.tipo === 'sucesso' 
+            ? 'bg-green-500/20 border-green-400/30 text-green-300' 
+            : 'bg-red-500/20 border-red-400/30 text-red-300'
+        }`}>
+          {mensagem.tipo === 'sucesso' ? (
+            <Check size={20} />
+          ) : (
+            <AlertCircle size={20} />
+          )}
+          {mensagem.texto}
         </div>
       )}
-      
-      {erro && (
-        <div className="mb-6 p-4 rounded-2xl flex items-center gap-3 bg-red-500/20 border border-red-400/30 text-red-300 backdrop-blur-sm">
-          <X size={20} />
-          <span className="font-medium">{erro}</span>
-        </div>
-      )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        
-        {/* Título e Tipo */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold mb-3 text-white/90 flex items-center gap-2">
-              <Calendar size={16} className="text-green-400" />
-              Título do Agendamento
-            </label>
-            <input
-              type="text"
-              name="titulo"
-              value={formData.titulo}
-              onChange={handleChange}
-              required
-              className="w-full p-4 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm hover:bg-white/10"
-              placeholder="Ex: Reunião de planejamento"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-3 text-white/90 flex items-center gap-2">
-              <FileText size={16} className="text-green-400" />
-              Tipo
-            </label>
-            <select
-              name="tipo"
-              value={formData.tipo}
-              onChange={handleChange}
-              required
-              className="w-full p-4 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 backdrop-blur-sm hover:bg-white/10"
-            >
-              {tiposAgendamento.map((tipo) => (
-                <option key={tipo.value} value={tipo.value} className="bg-slate-800">
-                  {tipo.label}
-                </option>
-              ))}
-            </select>
-            {/* Preview da cor do tipo */}
-            <div className="mt-2 flex items-center gap-2">
-              <div 
-                className="w-3 h-3 rounded-full" 
-                style={{ backgroundColor: tipoSelecionado?.color }}
-              ></div>
-              <span className="text-white/60 text-xs">{tipoSelecionado?.label}</span>
-            </div>
-          </div>
+      <div className="space-y-6">
+        {/* Título */}
+        <div>
+          <label className="block text-white font-medium mb-2">
+            Título do Agendamento *
+          </label>
+          <input
+            type="text"
+            value={agendamento.titulo}
+            onChange={(e) => handleInputChange('titulo', e.target.value)}
+            placeholder="Ex: Reunião de equipe, Consulta médica..."
+            className="w-full px-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm"
+          />
         </div>
 
-        {/* Data e Horários */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Data e Hora */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold mb-3 text-white/90 flex items-center gap-2">
-              <Calendar size={16} className="text-green-400" />
-              Data
+            <label className="block text-white font-medium mb-2">
+              <Calendar size={16} className="inline mr-2" />
+              Data *
             </label>
             <input
               type="date"
-              name="data"
-              value={formData.data}
-              onChange={handleChange}
-              required
-              className="w-full p-4 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 backdrop-blur-sm hover:bg-white/10"
+              value={agendamento.data}
+              onChange={(e) => handleInputChange('data', e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 backdrop-blur-sm"
             />
           </div>
-
+          
           <div>
-            <label className="block text-sm font-semibold mb-3 text-white/90 flex items-center gap-2">
-              <Clock size={16} className="text-green-400" />
-              Hora Início
+            <label className="block text-white font-medium mb-2">
+              <Clock size={16} className="inline mr-2" />
+              Hora *
             </label>
             <input
               type="time"
-              name="hora_inicio"
-              value={formData.hora_inicio}
-              onChange={handleChange}
-              required
-              className="w-full p-4 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 backdrop-blur-sm hover:bg-white/10"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-3 text-white/90 flex items-center gap-2">
-              <Clock size={16} className="text-green-400" />
-              Hora Fim
-            </label>
-            <input
-              type="time"
-              name="hora_fim"
-              value={formData.hora_fim}
-              onChange={handleChange}
-              required
-              className="w-full p-4 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 backdrop-blur-sm hover:bg-white/10"
+              value={agendamento.hora}
+              onChange={(e) => handleInputChange('hora', e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 backdrop-blur-sm"
             />
           </div>
         </div>
 
-        {/* Local e Participantes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-semibold mb-3 text-white/90 flex items-center gap-2">
-              <MapPin size={16} className="text-green-400" />
-              Local (opcional)
-            </label>
-            <input
-              type="text"
-              name="local"
-              value={formData.local}
-              onChange={handleChange}
-              className="w-full p-4 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm hover:bg-white/10"
-              placeholder="Ex: Sala de reuniões, Online, etc."
-            />
+        {/* Local */}
+        <div>
+          <label className="block text-white font-medium mb-2">
+            <MapPin size={16} className="inline mr-2" />
+            Local
+          </label>
+          <input
+            type="text"
+            value={agendamento.local}
+            onChange={(e) => handleInputChange('local', e.target.value)}
+            placeholder="Ex: Sala de reuniões, Clínica médica, Online..."
+            className="w-full px-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm"
+          />
+        </div>
+
+        {/* Participantes */}
+        <div>
+          <label className="block text-white font-medium mb-2">
+            <Users size={16} className="inline mr-2" />
+            Participantes
+          </label>
+          
+          {/* Busca de participantes */}
+          <div className="relative" ref={listaParticipantesRef}>
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-green-400" />
+              <input
+                ref={inputParticipanteRef}
+                type="text"
+                value={buscaParticipante}
+                onChange={(e) => {
+                  setBuscaParticipante(e.target.value);
+                  setMostrarListaParticipantes(true);
+                }}
+                onFocus={() => setMostrarListaParticipantes(true)}
+                placeholder={carregandoCadastros ? "Carregando cadastros..." : "Buscar pessoas para adicionar..."}
+                disabled={carregandoCadastros}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm"
+              />
+            </div>
+
+            {/* Lista de resultados */}
+            {mostrarListaParticipantes && buscaParticipante && (
+              <div className="absolute z-10 w-full mt-2 bg-slate-800 rounded-xl border border-slate-600 max-h-60 overflow-y-auto shadow-2xl">
+                {carregandoCadastros ? (
+                  <div className="p-4 text-center text-slate-400">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-green-400/30 border-t-green-400 mx-auto mb-2"></div>
+                    Carregando...
+                  </div>
+                ) : cadastrosFiltrados.length > 0 ? (
+                  cadastrosFiltrados.map((cadastro) => (
+                    <button
+                      key={cadastro.id}
+                      onClick={() => adicionarParticipante(cadastro)}
+                      className="w-full text-left p-3 hover:bg-slate-700 transition-colors border-b border-slate-600 last:border-b-0 first:rounded-t-xl last:rounded-b-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                          <Users size={14} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">{cadastro.nome}</p>
+                          <p className="text-slate-300 text-sm">{cadastro.email}</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-slate-400">
+                    Nenhuma pessoa encontrada
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-3 text-white/90 flex items-center gap-2">
-              <Users size={16} className="text-green-400" />
-              Participantes (opcional)
-            </label>
-            <input
-              type="text"
-              name="participantes"
-              value={formData.participantes}
-              onChange={handleChange}
-              className="w-full p-4 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm hover:bg-white/10"
-              placeholder="Ex: João, Maria, Pedro"
-            />
-          </div>
+          {/* Participantes selecionados */}
+          {agendamento.participantes.length > 0 && (
+            <div className="mt-4">
+              <p className="text-white/70 text-sm mb-3">
+                Participantes selecionados ({agendamento.participantes.length}):
+              </p>
+              <div className="space-y-2">
+                {agendamento.participantes.map((participante) => (
+                  <div
+                    key={participante.id}
+                    className="flex items-center justify-between bg-green-500/20 rounded-lg p-3 border border-green-400/30"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                        <Users size={14} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{participante.nome}</p>
+                        <p className="text-green-200 text-sm">{participante.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removerParticipante(participante.id)}
+                      className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-all duration-200"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Descrição */}
         <div>
-          <label className="block text-sm font-semibold mb-3 text-white/90 flex items-center gap-2">
-            <FileText size={16} className="text-green-400" />
-            Descrição (opcional)
+          <label className="block text-white font-medium mb-2">
+            Descrição
           </label>
           <textarea
-            name="descricao"
-            value={formData.descricao}
-            onChange={handleChange}
-            rows="4"
-            className="w-full p-4 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm hover:bg-white/10 resize-none"
-            placeholder="Descreva os detalhes do agendamento..."
+            value={agendamento.descricao}
+            onChange={(e) => handleInputChange('descricao', e.target.value)}
+            placeholder="Adicione detalhes, agenda ou observações sobre o agendamento..."
+            rows={4}
+            className="w-full px-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm resize-none"
           />
         </div>
-        
-        {/* Resumo do agendamento */}
-        {formData.titulo && formData.data && formData.hora_inicio && (
-          <div className="bg-white/5 rounded-2xl p-6 border border-white/10 backdrop-blur-sm">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Check size={18} className="text-green-400" />
-              Resumo do Agendamento
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-white/60">Título:</span>
-                <span className="text-white font-medium ml-2">{formData.titulo}</span>
-              </div>
-              <div>
-                <span className="text-white/60">Tipo:</span>
-                <span className="text-white font-medium ml-2 flex items-center gap-2">
-                  <div 
-                    className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: tipoSelecionado?.color }}
-                  ></div>
-                  {tipoSelecionado?.label}
-                </span>
-              </div>
-              <div>
-                <span className="text-white/60">Data:</span>
-                <span className="text-white font-medium ml-2">
-                  {new Date(formData.data + 'T00:00:00').toLocaleDateString('pt-BR')}
-                </span>
-              </div>
-              <div>
-                <span className="text-white/60">Horário:</span>
-                <span className="text-white font-medium ml-2">
-                  {formData.hora_inicio} - {formData.hora_fim}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div className="flex justify-end pt-4">
+
+        {/* Botões */}
+        <div className="flex gap-4 pt-6 border-t border-white/10">
           <button
-            type="submit"
-            disabled={carregando}
-            className="group relative py-4 px-8 rounded-xl font-bold text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:opacity-50 flex items-center gap-3 transition-all duration-300 transform hover:scale-105 disabled:transform-none shadow-xl overflow-hidden"
+            onClick={() => {
+              setAgendamento({
+                titulo: '',
+                data: '',
+                hora: '',
+                local: '',
+                descricao: '',
+                participantes: []
+              });
+              setMensagem({ tipo: '', texto: '' });
+            }}
+            className="flex-1 py-3 px-6 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all duration-300 border border-white/20"
+            disabled={carregandoSalvar}
           >
-            {/* Brilho animado */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            
-            <div className="relative flex items-center gap-3">
-              {carregando ? (
+            Limpar
+          </button>
+          
+          <button
+            onClick={salvarAgendamento}
+            disabled={carregandoSalvar}
+            className="flex-1 py-3 px-6 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {carregandoSalvar ? (
+              <>
                 <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
-              ) : (
-                <Plus size={20} />
-              )}
-              {carregando ? 'Criando...' : 'Criar Agendamento'}
-            </div>
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save size={18} />
+                Criar Agendamento
+              </>
+            )}
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
