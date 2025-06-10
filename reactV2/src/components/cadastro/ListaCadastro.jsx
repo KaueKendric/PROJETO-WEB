@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Users, Mail, Phone, AlertCircle } from 'lucide-react';
+import { Users, Mail, Phone, AlertCircle, Eye, X, Filter } from 'lucide-react';
 
 function ListaCadastro() {
   const [cadastros, setCadastros] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
-  const API_URL = import.meta.env.VITE_API_URL;
+  const [cadastroSelecionado, setCadastroSelecionado] = useState(null);
+  const [filtro, setFiltro] = useState('');
 
   useEffect(() => {
     const fetchCadastros = async () => {
       try {
-        const response = await fetch(`${API_URL}/cadastros/`);
+        const response = await fetch('http://localhost:8000/cadastros/');
         if (!response.ok) {
           throw new Error('Erro ao buscar cadastros');
         }
@@ -26,15 +27,21 @@ function ListaCadastro() {
     fetchCadastros();
   }, []);
 
+  const cadastrosFiltrados = cadastros.filter(cadastro =>
+    cadastro.nome.toLowerCase().includes(filtro.toLowerCase()) ||
+    cadastro.email.toLowerCase().includes(filtro.toLowerCase())
+  );
+
   if (erro) {
     return (
       <div className="w-full">
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
-          <Users className="text-blue-400" /> Lista de Cadastros
+          <Users className="text-purple-400" size={28} />
+          Lista de Cadastros
         </h2>
-        <div className="text-center text-red-500 p-8 bg-red-900/20 rounded-lg border border-red-800">
-          <AlertCircle className="inline mr-2" size={24} />
-          <p className="text-lg">{erro}</p>
+        <div className="text-center p-8 bg-red-500/20 rounded-2xl border border-red-400/30 backdrop-blur-sm">
+          <AlertCircle className="mx-auto mb-4 text-red-300" size={48} />
+          <p className="text-lg text-red-300 font-medium">{erro}</p>
         </div>
       </div>
     );
@@ -42,45 +49,73 @@ function ListaCadastro() {
 
   return (
     <div className="w-full">
-      <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
-        <Users className="text-blue-400" /> Lista de Cadastros
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
+          <Users className="text-purple-400" size={28} />
+          Lista de Cadastros
+        </h2>
+        
+        {/* Filtro */}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Filter size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400" />
+            <input
+              type="text"
+              placeholder="Filtrar cadastros..."
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              className="pl-10 pr-4 py-2 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-purple-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm w-64"
+            />
+          </div>
+        </div>
+      </div>
       
       {carregando ? (
-        <div className="text-center py-10">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto border-blue-500"></div>
-          <p className="mt-3 text-slate-400">Carregando cadastros...</p>
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-purple-400/30 border-t-purple-400 mx-auto mb-4"></div>
+          <p className="text-white/70">Carregando cadastros...</p>
         </div>
-      ) : cadastros.length > 0 ? (
+      ) : cadastrosFiltrados.length > 0 ? (
         <>
-          <div className="mb-4 text-slate-400">
-            <p>Total de cadastros: <span className="font-bold text-white">{cadastros.length}</span></p>
+          <div className="mb-6 flex items-center justify-between">
+            <p className="text-white/70">
+              {filtro ? 'Filtrados' : 'Total'}: 
+              <span className="font-bold text-white ml-2">{cadastrosFiltrados.length}</span> cadastro(s)
+            </p>
+            {filtro && (
+              <button
+                onClick={() => setFiltro('')}
+                className="text-purple-400 hover:text-white transition-colors text-sm"
+              >
+                Limpar filtro
+              </button>
+            )}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {cadastros.map((cadastro) => (
+            {cadastrosFiltrados.map((cadastro) => (
               <div
                 key={cadastro.id}
-                className="bg-slate-900 rounded-lg p-5 border border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-lg"
+                className="group bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-purple-400/50 transition-all duration-300 hover:bg-white/10 cursor-pointer transform hover:scale-[1.02]"
               >
                 <div className="text-center mb-4">
-                  <h3 className="font-bold text-lg text-white mb-1">
+                  <h3 className="font-bold text-lg text-white mb-2 group-hover:text-purple-200 transition-colors">
                     {cadastro.nome}
                   </h3>
-                  <p className="text-sm text-slate-500">
+                  <span className="text-sm bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full border border-purple-400/30">
                     ID: {cadastro.id}
-                  </p>
+                  </span>
                 </div>
                 
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-slate-300">
-                    <Mail size={16} className="text-blue-400 flex-shrink-0" />
+                  <div className="flex items-center gap-3 text-white/80">
+                    <Mail size={16} className="text-purple-400 flex-shrink-0" />
                     <span className="text-sm truncate" title={cadastro.email}>
                       {cadastro.email}
                     </span>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-slate-300">
+                  <div className="flex items-center gap-3 text-white/80">
                     <Phone size={16} className="text-green-400 flex-shrink-0" />
                     <span className="text-sm">
                       {cadastro.telefone}
@@ -88,28 +123,119 @@ function ListaCadastro() {
                   </div>
                   
                   {cadastro.data_nascimento && (
-                    <div className="text-slate-400 text-sm">
+                    <div className="text-white/60 text-sm">
                       <span className="font-medium">Nascimento:</span> {cadastro.data_nascimento}
                     </div>
                   )}
                   
                   {cadastro.endereco && (
-                    <div className="text-slate-400 text-sm">
-                      <span className="font-medium">Endereço:</span> {cadastro.endereco}
+                    <div className="text-white/60 text-sm">
+                      <span className="font-medium">Endereço:</span> 
+                      <span className="block truncate" title={cadastro.endereco}>
+                        {cadastro.endereco}
+                      </span>
                     </div>
                   )}
+                </div>
+
+                {/* Botão de detalhes */}
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <button
+                    onClick={() => setCadastroSelecionado(cadastro)}
+                    className="w-full py-2 px-4 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-white transition-all duration-300 flex items-center justify-center gap-2 border border-purple-400/30 hover:border-purple-400/50"
+                  >
+                    <Eye size={16} />
+                    Ver Detalhes
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </>
       ) : (
-        <div className="text-center py-10 text-slate-500">
-          <Users size={48} className="mx-auto mb-4 text-slate-600" />
-          <p className="text-lg">Nenhum cadastro encontrado.</p>
-          <p className="text-sm mt-2">
-            Comece criando o primeiro cadastro na aba "Criar Cadastro".
+        <div className="text-center py-12">
+          <Users size={64} className="mx-auto mb-6 text-white/30" />
+          <h3 className="text-xl font-bold text-white mb-2">Nenhum cadastro encontrado</h3>
+          <p className="text-white/60">
+            {filtro 
+              ? 'Tente alterar o filtro ou criar novos cadastros.'
+              : 'Comece criando o primeiro cadastro na aba "Novo Cadastro".'
+            }
           </p>
+        </div>
+      )}
+
+      {/* Modal de detalhes */}
+      {cadastroSelecionado && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-white">Detalhes do Cadastro</h3>
+              <button
+                onClick={() => setCadastroSelecionado(null)}
+                className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-300"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="text-center pb-6 border-b border-white/10">
+                <h4 className="font-bold text-white text-2xl mb-2">{cadastroSelecionado.nome}</h4>
+                <span className="bg-purple-500/20 text-purple-300 px-4 py-2 rounded-full border border-purple-400/30">
+                  ID: {cadastroSelecionado.id}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Mail size={20} className="text-purple-400" />
+                    <span className="text-white/60 text-sm font-medium">Email</span>
+                  </div>
+                  <p className="text-white font-medium">{cadastroSelecionado.email}</p>
+                </div>
+                
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Phone size={20} className="text-green-400" />
+                    <span className="text-white/60 text-sm font-medium">Telefone</span>
+                  </div>
+                  <p className="text-white font-medium">{cadastroSelecionado.telefone}</p>
+                </div>
+                
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Users size={20} className="text-blue-400" />
+                    <span className="text-white/60 text-sm font-medium">Data de Nascimento</span>
+                  </div>
+                  <p className="text-white font-medium">{cadastroSelecionado.data_nascimento}</p>
+                </div>
+                
+                {cadastroSelecionado.endereco && (
+                  <div className="bg-white/5 rounded-2xl p-4 border border-white/10 md:col-span-2">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Mail size={20} className="text-yellow-400" />
+                      <span className="text-white/60 text-sm font-medium">Endereço</span>
+                    </div>
+                    <p className="text-white font-medium">{cadastroSelecionado.endereco}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-8 pt-6 border-t border-white/10">
+              <button
+                onClick={() => setCadastroSelecionado(null)}
+                className="flex-1 py-3 px-6 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all duration-300 border border-white/20"
+              >
+                Fechar
+              </button>
+              <button className="py-3 px-6 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all duration-300">
+                Editar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
