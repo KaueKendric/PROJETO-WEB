@@ -8,6 +8,13 @@ function ListaCadastro() {
   const [cadastroSelecionado, setCadastroSelecionado] = useState(null);
   const [filtro, setFiltro] = useState('');
 
+  // Função para formatar data no formato brasileiro
+  const formatarData = (data) => {
+    if (!data) return '';
+    const [ano, mes, dia] = data.split('-');
+    return `${dia}/${mes}/${ano}`;
+  };
+
   useEffect(() => {
     const fetchCadastros = async () => {
       try {
@@ -124,7 +131,7 @@ function ListaCadastro() {
                   
                   {cadastro.data_nascimento && (
                     <div className="text-white/60 text-sm">
-                      <span className="font-medium">Nascimento:</span> {cadastro.data_nascimento}
+                      <span className="font-medium">Nascimento:</span> {formatarData(cadastro.data_nascimento)}
                     </div>
                   )}
                   
@@ -165,58 +172,60 @@ function ListaCadastro() {
         </div>
       )}
 
-      {/* Modal de detalhes */}
+      {/* Modal de detalhes - TOTALMENTE SÓLIDO */}
       {cadastroSelecionado && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-slate-700 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-bold text-white">Detalhes do Cadastro</h3>
               <button
                 onClick={() => setCadastroSelecionado(null)}
-                className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-300"
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all duration-300"
               >
                 <X size={24} />
               </button>
             </div>
             
             <div className="space-y-6">
-              <div className="text-center pb-6 border-b border-white/10">
+              <div className="text-center pb-6 border-b border-slate-700">
                 <h4 className="font-bold text-white text-2xl mb-2">{cadastroSelecionado.nome}</h4>
-                <span className="bg-purple-500/20 text-purple-300 px-4 py-2 rounded-full border border-purple-400/30">
+                <span className="bg-purple-600 text-white px-4 py-2 rounded-full font-medium">
                   ID: {cadastroSelecionado.id}
                 </span>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
                   <div className="flex items-center gap-3 mb-2">
                     <Mail size={20} className="text-purple-400" />
-                    <span className="text-white/60 text-sm font-medium">Email</span>
+                    <span className="text-slate-300 text-sm font-medium">Email</span>
                   </div>
                   <p className="text-white font-medium">{cadastroSelecionado.email}</p>
                 </div>
                 
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
                   <div className="flex items-center gap-3 mb-2">
                     <Phone size={20} className="text-green-400" />
-                    <span className="text-white/60 text-sm font-medium">Telefone</span>
+                    <span className="text-slate-300 text-sm font-medium">Telefone</span>
                   </div>
                   <p className="text-white font-medium">{cadastroSelecionado.telefone}</p>
                 </div>
                 
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Users size={20} className="text-blue-400" />
-                    <span className="text-white/60 text-sm font-medium">Data de Nascimento</span>
+                {cadastroSelecionado.data_nascimento && (
+                  <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Users size={20} className="text-blue-400" />
+                      <span className="text-slate-300 text-sm font-medium">Data de Nascimento</span>
+                    </div>
+                    <p className="text-white font-medium">{formatarData(cadastroSelecionado.data_nascimento)}</p>
                   </div>
-                  <p className="text-white font-medium">{cadastroSelecionado.data_nascimento}</p>
-                </div>
+                )}
                 
                 {cadastroSelecionado.endereco && (
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/10 md:col-span-2">
+                  <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 md:col-span-2">
                     <div className="flex items-center gap-3 mb-2">
                       <Mail size={20} className="text-yellow-400" />
-                      <span className="text-white/60 text-sm font-medium">Endereço</span>
+                      <span className="text-slate-300 text-sm font-medium">Endereço</span>
                     </div>
                     <p className="text-white font-medium">{cadastroSelecionado.endereco}</p>
                   </div>
@@ -224,10 +233,10 @@ function ListaCadastro() {
               </div>
             </div>
             
-            <div className="flex gap-3 mt-8 pt-6 border-t border-white/10">
+            <div className="flex gap-3 mt-8 pt-6 border-t border-slate-700">
               <button
                 onClick={() => setCadastroSelecionado(null)}
-                className="flex-1 py-3 px-6 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all duration-300 border border-white/20"
+                className="flex-1 py-3 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium transition-all duration-300 border border-slate-700"
               >
                 Fechar
               </button>

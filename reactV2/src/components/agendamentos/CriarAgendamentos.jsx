@@ -21,11 +21,11 @@ function CriarAgendamento() {
   const inputParticipanteRef = useRef(null);
   const listaParticipantesRef = useRef(null);
 
-  // Buscar cadastros do backend
+  // Buscar cadastros do backend - URL CORRIGIDA
   useEffect(() => {
     const fetchCadastros = async () => {
       try {
-        const response = await fetch('http://localhost:8000/cadastros/');
+        const response = await fetch('http://localhost:8000/cadastros/'); // URL CORRIGIDA
         if (!response.ok) {
           throw new Error('Erro ao buscar cadastros');
         }
@@ -113,10 +113,14 @@ function CriarAgendamento() {
         hora: agendamento.hora,
         local: agendamento.local,
         descricao: agendamento.descricao,
-        participantes_ids: agendamento.participantes.map(p => p.id)
+        participantes_ids: agendamento.participantes.map(p => p.id),
+        tipo_sessao: 'reuniao',
+        duracao_em_minutos: 60
       };
 
-      const response = await fetch('http://localhost:8000/agendamentos/', {
+      console.log('📤 Enviando agendamento:', dadosAgendamento);
+
+      const response = await fetch('http://localhost:8000/api/agendamentos/', { // URL CORRIGIDA
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,8 +129,12 @@ function CriarAgendamento() {
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao salvar agendamento');
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Erro ao salvar agendamento');
       }
+
+      const resultado = await response.json();
+      console.log('✅ Agendamento criado:', resultado);
 
       setMensagem({ tipo: 'sucesso', texto: 'Agendamento criado com sucesso!' });
       
@@ -141,8 +149,11 @@ function CriarAgendamento() {
       });
 
     } catch (error) {
-      console.error('Erro ao salvar agendamento:', error);
-      setMensagem({ tipo: 'erro', texto: 'Erro ao salvar agendamento. Tente novamente.' });
+      console.error('❌ Erro ao salvar agendamento:', error);
+      setMensagem({ 
+        tipo: 'erro', 
+        texto: `Erro ao salvar agendamento: ${error.message}` 
+      });
     } finally {
       setCarregandoSalvar(false);
     }

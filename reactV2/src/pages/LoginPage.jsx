@@ -60,6 +60,7 @@ function LoginPage({ onLogin }) {
         setError('Credenciais inválidas. Verifique seu usuário e senha.');
       }
       
+    // eslint-disable-next-line no-unused-vars
     } catch (error) {
       setError('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {

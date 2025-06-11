@@ -4,7 +4,7 @@ from datetime import date
 import datetime
 
 class Cadastro(BaseModel):
-    id: Optional[int] = None  # Certifique-se de que esta linha está presente
+    id: Optional[int] = None  
     nome: str
     email: str
     telefone: str
