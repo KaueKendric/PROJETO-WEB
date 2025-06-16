@@ -19,6 +19,7 @@ class Cadastro(Base):
     telefone = Column(String(20))
     data_nascimento = Column(Date)
     endereco = Column(String(500))
+    data_criacao = Column(DateTime, default=func.now())
 
     # Relacionamentos
     agendamentos = relationship("Agendamento", back_populates="cadastro")

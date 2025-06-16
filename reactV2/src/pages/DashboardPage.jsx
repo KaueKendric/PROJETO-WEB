@@ -8,7 +8,12 @@ function DashboardPage({ onLogout }) {
     const [userName] = useState('Admin');
     const [greeting, setGreeting] = useState('');
 
-    // Atualizar hora a cada minuto
+    const [sistemas, setSistemas] = useState([]);
+    const [estatisticas, setEstatisticas] = useState([]);
+
+    const API_URL = import.meta.env.VITE_API_URL;
+
+    // Atualizar hora
     useEffect(() => {
         const timer = setInterval(() => {
             setCurrentTime(new Date());
@@ -17,7 +22,7 @@ function DashboardPage({ onLogout }) {
         return () => clearInterval(timer);
     }, []);
 
-    // Definir saudação baseada no horário
+    // Saudação
     useEffect(() => {
         const hour = currentTime.getHours();
         if (hour < 12) {
@@ -29,56 +34,122 @@ function DashboardPage({ onLogout }) {
         }
     }, [currentTime]);
 
-    const sistemas = [
-        {
-            id: 'cadastramento',
-            name: 'Sistema de Cadastro',
-            description: 'Gerencie cadastros de usuários e dados pessoais',
-            icon: UserPlus,
-            gradient: 'from-purple-500 to-purple-700',
-            path: '/cadastramento',
-            stats: '1,234',
-            label: 'cadastros',
-            trend: '+12%',
-            active: true
-        },
-        {
-            id: 'agendamento',
-            name: 'Sistema de Agendamento',
-            description: 'Gerencie compromissos, eventos e reuniões',
-            icon: Calendar,
-            gradient: 'from-green-500 to-green-700',
-            path: '/agendamento',
-            stats: '45',
-            label: 'agendamentos',
-            trend: '+8%',
-            active: true
-        },
-        {
-            id: 'relatorios',
-            name: 'Relatórios & Analytics',
-            description: 'Visualize dados, métricas e estatísticas',
-            icon: BarChart3,
-            gradient: 'from-blue-500 to-blue-700',
-            path: '#',
-            stats: 'Em breve',
-            label: '',
-            trend: '',
-            active: false
-        },
-        {
-            id: 'configuracoes',
-            name: 'Configurações',
-            description: 'Ajustes do sistema e preferências',
-            icon: Settings,
-            gradient: 'from-gray-500 to-gray-700',
-            path: '#',
-            stats: 'Sistema',
-            label: '',
-            trend: '',
-            active: false
+    // Fetch dados dashboard
+    useEffect(() => {
+        const fetchDadosDashboard = async () => {
+            try {
+                const summaryRes = await fetch(`${API_URL}/api/dashboard/summary`);
+                const atividadeRes = await fetch(`${API_URL}/api/dashboard/atividade`);
+
+                const summary = await summaryRes.json();
+                const atividade = await atividadeRes.json();
+
+                setSistemas([
+                    {
+                        id: 'cadastramento',
+                        name: 'Sistema de Cadastro',
+                        description: 'Gerencie cadastros de usuários e dados pessoais',
+                        icon: UserPlus,
+                        gradient: 'from-purple-500 to-purple-700',
+                        path: '/cadastramento',
+                        stats: summary.cadastros,
+                        label: 'cadastros',
+                        trend: '+0%',
+                        active: true
+                    },
+                    {
+                        id: 'agendamento',
+                        name: 'Sistema de Agendamento',
+                        description: 'Gerencie compromissos, eventos e reuniões',
+                        icon: Calendar,
+                        gradient: 'from-green-500 to-green-700',
+                        path: '/agendamento',
+                        stats: summary.agendamentos,
+                        label: 'agendamentos',
+                        trend: '+0%',
+                        active: true
+                    },
+                    {
+                        id: 'relatorios',
+                        name: 'Relatórios & Analytics',
+                        description: 'Visualize dados, métricas e estatísticas',
+                        icon: BarChart3,
+                        gradient: 'from-blue-500 to-blue-700',
+                        path: '#',
+                        stats: 'Em breve',
+                        label: '',
+                        trend: '',
+                        active: false
+                    },
+                    {
+                        id: 'configuracoes',
+                        name: 'Configurações',
+                        description: 'Ajustes do sistema e preferências',
+                        icon: Settings,
+                        gradient: 'from-gray-500 to-gray-700',
+                        path: '#',
+                        stats: 'Sistema',
+                        label: '',
+                        trend: '',
+                        active: false
+                    }
+                ]);
+
+                setEstatisticas([
+                    {
+                        title: 'Atividade Hoje',
+                        value: atividade.hoje,
+                        subtitle: 'ações realizadas',
+                        icon: Activity,
+                        color: 'text-green-400',
+                        bg: 'bg-green-500/20'
+                    },
+                    {
+                        title: 'Esta Semana',
+                        value: atividade.semana,
+                        subtitle: 'total de registros',
+                        icon: TrendingUp,
+                        color: 'text-blue-400',
+                        bg: 'bg-blue-500/20'
+                    },
+                    {
+                        title: 'Usuários Ativos',
+                        value: atividade.ativos_mes,
+                        subtitle: 'últimos 30 dias',
+                        icon: Users,
+                        color: 'text-purple-400',
+                        bg: 'bg-purple-500/20'
+                    }
+                ]);
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar dados do dashboard:', error);
+            }
+        };
+
+        fetchDadosDashboard();
+    }, [API_URL]);
+
+    const formatTime = (date) => {
+        return date.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    const formatDate = (date) => {
+        return date.toLocaleDateString('pt-BR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+        });
+    };
+
+    const handleSystemClick = (system) => {
+        if (system.active) {
+            navigate(system.path);
         }
-    ];
+    };
 
     const acoesRapidas = [
         {
@@ -104,63 +175,13 @@ function DashboardPage({ onLogout }) {
         }
     ];
 
-    const estatisticas = [
-        {
-            title: 'Atividade Hoje',
-            value: '24',
-            subtitle: 'ações realizadas',
-            icon: Activity,
-            color: 'text-green-400',
-            bg: 'bg-green-500/20'
-        },
-        {
-            title: 'Esta Semana',
-            value: '156',
-            subtitle: 'total de registros',
-            icon: TrendingUp,
-            color: 'text-blue-400',
-            bg: 'bg-blue-500/20'
-        },
-        {
-            title: 'Usuários Ativos',
-            value: '89',
-            subtitle: 'últimos 30 dias',
-            icon: Users,
-            color: 'text-purple-400',
-            bg: 'bg-purple-500/20'
-        }
-    ];
-
-    const formatTime = (date) => {
-        return date.toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
-
-    const formatDate = (date) => {
-        return date.toLocaleDateString('pt-BR', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long'
-        });
-    };
-
-    const handleSystemClick = (system) => {
-        if (system.active) {
-            navigate(system.path);
-        }
-    };
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/10 to-slate-900">
-
             {/* Header */}
             <header className="bg-white/5 backdrop-blur-xl border-b border-white/10 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16 lg:h-20">
-
-                        {/* Logo e brand */}
+                        {/* Logo */}
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
                                 <Zap size={20} className="text-white" />
@@ -201,10 +222,10 @@ function DashboardPage({ onLogout }) {
                 </div>
             </header>
 
-            {/* Conteúdo principal */}
+            {/* Conteúdo */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
 
-                {/* Saudação e resumo */}
+                {/* Saudação */}
                 <div className="mb-8 lg:mb-12">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                         <div>
@@ -227,7 +248,7 @@ function DashboardPage({ onLogout }) {
                     </div>
                 </div>
 
-                {/* Ações rápidas - Sempre visível */}
+                {/* Ações rápidas */}
                 <div className="mb-8">
                     <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                         <Zap size={20} className="text-purple-400" />
@@ -276,8 +297,9 @@ function DashboardPage({ onLogout }) {
                                             <IconComponent size={24} className={stat.color} />
                                         </div>
                                         <div>
+                                            <p className="text-base font-semibold text-purple-100 mb-1">{stat.title}</p>
                                             <h4 className="text-2xl font-bold text-white">{stat.value}</h4>
-                                            <p className="text-sm text-purple-200">{stat.subtitle}</p>
+                                            <p className="text-sm text-purple-300">{stat.subtitle}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -304,11 +326,9 @@ function DashboardPage({ onLogout }) {
                                             : 'opacity-60 cursor-not-allowed'
                                         }`}
                                 >
-                                    {/* Gradient background */}
                                     <div className={`absolute inset-0 bg-gradient-to-r ${system.gradient} opacity-0 group-hover:opacity-5 rounded-3xl transition-opacity duration-300`}></div>
 
                                     <div className="relative z-10">
-                                        {/* Header do card */}
                                         <div className="flex items-start justify-between mb-6">
                                             <div className={`w-16 h-16 bg-gradient-to-r ${system.gradient} rounded-2xl flex items-center justify-center shadow-xl`}>
                                                 <IconComponent size={28} className="text-white" />
@@ -325,7 +345,6 @@ function DashboardPage({ onLogout }) {
                                             </div>
                                         </div>
 
-                                        {/* Conteúdo */}
                                         <div className="mb-6">
                                             <h4 className="text-xl font-bold text-white mb-2">
                                                 {system.name}
@@ -335,7 +354,6 @@ function DashboardPage({ onLogout }) {
                                             </p>
                                         </div>
 
-                                        {/* Stats */}
                                         {system.active && (
                                             <div className="flex items-center justify-between">
                                                 <div>

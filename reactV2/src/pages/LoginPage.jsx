@@ -38,35 +38,44 @@ function LoginPage({ onLogin }) {
     event.preventDefault();
     setError('');
     setIsLoading(true);
-
+  
     console.log("Tentativa de login com:", { username, password });
-
+  
     try {
-      const response = await fetch(`${API_URL}/login/`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: username,
-          password: password,
+          email: username,   // 🔥 CORRETO
+          password: password
         })
       });
-
-      if (response.status === 200) {
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        console.log('✅ Login bem-sucedido:', data);
+  
+        // Salvar token no localStorage (opcional)
+        localStorage.setItem('token', data.token);
+  
         onLogin(true);
         navigate('/dashboard');
       } else {
-        setError('Credenciais inválidas. Verifique seu usuário e senha.');
+        console.log('❌ Erro no login:', data);
+        setError(data.detail || 'Credenciais inválidas. Verifique seu usuário e senha.');
       }
-      
-    // eslint-disable-next-line no-unused-vars
+  
     } catch (error) {
+      console.log('❌ Erro na conexão:', error);
       setError('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setIsLoading(false);
     }
   };
+  
 
   // Criar partículas flutuantes
   const createParticles = () => {

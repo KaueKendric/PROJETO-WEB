@@ -1,29 +1,29 @@
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import uvicorn
-import json
 from datetime import datetime
 
 # IMPORTAÇÕES DO SISTEMA
 from app.database.database import get_db, engine
 from app.database import models
+from app.utils import auth
 from app.utils.email import enviar_email_background
+from app.routers import agendamento, cadastro, funcionario, login, dashboard
 
-# CRIAR TABELAS NO BANCO
+# ✅ Criação das tabelas no banco
 models.Base.metadata.create_all(bind=engine)
 
-# INSTÂNCIA DA APLICAÇÃO
+# ✅ Instância da aplicação FastAPI
 app = FastAPI(
     title="Sistema de Agendamentos",
-    description="API para gerenciamento de cadastros e agendamentos",
+    description="API para gerenciamento de cadastros, agendamentos e dashboard",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# CONFIGURAR CORS
+# ✅ Configuração de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,38 +32,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ROTA PRINCIPAL
+# ✅ Inclusão dos routers
+app.include_router(agendamento.router)
+app.include_router(cadastro.router)
+app.include_router(funcionario.router)
+app.include_router(login.router)
+app.include_router(dashboard.router)
+app.include_router(login.router)
+
+# ✅ Rota principal
 @app.get("/")
 async def root():
     return {
         "message": "Sistema de Agendamentos - API",
         "version": "1.0.0",
         "status": "online",
-        "login": "POST /login/ (aceita qualquer email/senha)"
+        "login": "POST /auth/login (usuário: admin, senha: 123456)"
     }
 
-# ROTA DE LOGIN SUPER SIMPLES
-@app.post("/login/")
-async def login(request: Request):
-    try:
-        body = await request.body()
-        data = json.loads(body)
-        email = data.get('email', '')
-        password = data.get('password', '')
-
-        if not email or not password:
-            return {"success": False, "message": "Email e senha são obrigatórios"}
-
-        return {
-            "success": True,
-            "message": "Login realizado com sucesso",
-            "user": {"id": 1, "nome": "Usuário Demo", "email": email},
-            "token": f"demo_token_{email[:5]}"
-        }
-    except Exception:
-        return {"success": False, "message": "Erro interno"}
-
-# LISTAR CADASTROS
+# ✅ Listagem de cadastros
 @app.get("/cadastros/")
 async def listar_cadastros(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     try:
@@ -78,12 +65,10 @@ async def obter_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
         if not cadastro:
             raise HTTPException(status_code=404, detail="Cadastro não encontrado")
         return cadastro
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# LISTAR FUNCIONÁRIOS
+# ✅ Listagem de funcionários
 @app.get("/funcionarios/")
 async def listar_funcionarios(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     try:
@@ -91,7 +76,7 @@ async def listar_funcionarios(skip: int = 0, limit: int = 100, db: Session = Dep
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# CRIAR AGENDAMENTO
+# ✅ Criação de agendamento
 @app.post("/api/agendamentos/")
 def criar_agendamento(agendamento: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     try:
@@ -102,7 +87,7 @@ def criar_agendamento(agendamento: dict, background_tasks: BackgroundTasks, db: 
             data_hora=data_hora,
             local=agendamento.get("local", ""),
             duracao_em_minutos=agendamento.get("duracao_em_minutos", 60),
-            usuario_id=1,
+            usuario_id=1,  # Login fixo por enquanto
             profissional_responsavel_id=None,
             observacoes=agendamento.get("descricao", "")
         )
@@ -130,7 +115,6 @@ def criar_agendamento(agendamento: dict, background_tasks: BackgroundTasks, db: 
                 "descricao": novo_agendamento.observacoes
             }
 
-
             enviar_email_background(
                 background_tasks,
                 destinatario=email_destino,
@@ -143,8 +127,9 @@ def criar_agendamento(agendamento: dict, background_tasks: BackgroundTasks, db: 
 
     except Exception:
         raise HTTPException(status_code=500, detail="Erro ao criar agendamento")
-    
-@app.get("/api/agendamentos/") 
+
+# ✅ Listagem de agendamentos
+@app.get("/api/agendamentos/")
 def listar_agendamentos(db: Session = Depends(get_db)):
     try:
         agendamentos = db.query(models.Agendamento).all()
@@ -152,12 +137,11 @@ def listar_agendamentos(db: Session = Depends(get_db)):
     except Exception:
         raise HTTPException(status_code=500, detail="Erro ao listar agendamentos")
 
-
-# STARTUP
+# ✅ Evento de startup
 @app.on_event("startup")
 async def startup_event():
     print("🚀 Sistema de Agendamentos iniciado!")
 
-# EXECUTAR
+# ✅ Execução da aplicação
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
