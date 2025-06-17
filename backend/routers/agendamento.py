@@ -1,98 +1,87 @@
-from fastapi import APIRouter, HTTPException, Depends, status
-from typing import List
-from datetime import datetime
+from fastapi import APIRouter, HTTPException, Depends, status, Query
+from typing import List, Dict, Any
+from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, and_, or_
 
 from backend.database.database import get_db
 from backend.database import models
-
-# Imports dos schemas - usando import seguro
-try:
-    from backend.schemas import agendamento as agendamento_schema
-    print("✅ Schemas importados com sucesso")
-except ImportError as e:
-    print(f"⚠️ Erro ao importar schemas: {e}")
-    # Criar schemas básicos inline se não conseguir importar
-    from pydantic import BaseModel
-    from typing import Optional
-    
-    class AgendamentoCreate(BaseModel):
-        titulo: str
-        data: str
-        hora: str
-        local: Optional[str] = None
-        descricao: Optional[str] = None
-        participantes_ids: List[int] = []
-        tipo_sessao: Optional[str] = "reuniao"
-        duracao_em_minutos: Optional[int] = 60
-    
-    class ParticipanteResponse(BaseModel):
-        id: int
-        nome: str
-        email: str
-        
-        class Config:
-            from_attributes = True
-    
-    class AgendamentoResponse(BaseModel):
-        id: int
-        titulo: str
-        data_hora: datetime
-        tipo_sessao: str
-        status: str
-        observacoes: Optional[str] = None
-        duracao_em_minutos: Optional[int] = None
-        local: Optional[str] = None
-        participantes: List[ParticipanteResponse] = []
-        
-        class Config:
-            from_attributes = True
-    
-    # Criar um mock do módulo schema
-    class MockSchema:
-        AgendamentoCreate = AgendamentoCreate
-        AgendamentoResponse = AgendamentoResponse
-        ParticipanteResponse = ParticipanteResponse
-    
-    agendamento_schema = MockSchema()
+from backend.schemas import agendamento as agendamento_schema
 
 router = APIRouter(
     prefix="/agendamentos",
     tags=["agendamentos"],
 )
 
-@router.get("/", response_model=List[dict])
-async def listar_agendamentos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+# Schema para resposta paginada (adicionado ao seu schema existente)
+from pydantic import BaseModel
+
+class AgendamentoPaginado(BaseModel):
+    agendamentos: List[Dict[str, Any]]
+    total: int
+    pagina: int
+    totalPaginas: int
+    limit: int
+    skip: int
+    filtro: str
+    temProxima: bool
+    temAnterior: bool
+
+@router.get("/", response_model=AgendamentoPaginado)
+async def listar_agendamentos(
+    limit: int = Query(6, ge=1, le=50, description="Número de itens por página"),
+    skip: int = Query(0, ge=0, description="Número de itens para pular"),
+    filtro: str = Query("todos", description="Filtro a aplicar"),
+    db: Session = Depends(get_db)
+):
     """
-    Listar todos os agendamentos - versão segura
+    Listar agendamentos com paginação e filtros - Versão adaptada
     """
     try:
-        print(f"📅 Buscando agendamentos - skip: {skip}, limit: {limit}")
+        pagina = (skip // limit) + 1
+        print(f"📅 Buscando agendamentos - Página: {pagina}, Limit: {limit}, Skip: {skip}, Filtro: {filtro}")
         
-        # Query básica primeiro (sem relacionamentos)
-        agendamentos = db.query(models.Agendamento).offset(skip).limit(limit).all()
-        print(f"✅ Encontrados {len(agendamentos)} agendamentos")
+        # Query base com eager loading dos participantes
+        query = db.query(models.Agendamento).options(joinedload(models.Agendamento.participantes))
+        count_query = db.query(func.count(models.Agendamento.id))
         
-        # Converter para dicionário manualmente para evitar problemas de serialização
-        resultado = []
+        # Aplicar filtros baseados no seu modelo
+        filtros_aplicados = aplicar_filtros_agendamento(query, count_query, filtro)
+        query = filtros_aplicados["query"]
+        count_query = filtros_aplicados["count_query"]
+        
+        # Contar total de registros
+        total = count_query.scalar()
+        
+        # Aplicar paginação e ordenação
+        agendamentos = (
+            query
+            .order_by(models.Agendamento.data_hora.desc(), models.Agendamento.data_criacao.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        
+        # Processar agendamentos para resposta
+        agendamentos_processados = []
         for agendamento in agendamentos:
             try:
-                # Buscar participantes separadamente para evitar erro de relacionamento
+                # Buscar participantes de forma segura
                 participantes = []
-                if hasattr(agendamento, 'participantes'):
-                    try:
-                        participantes = [
-                            {
-                                "id": p.id,
-                                "nome": p.nome,
-                                "email": p.email
-                            }
-                            for p in agendamento.participantes
-                        ]
-                    except Exception as e:
-                        print(f"⚠️ Erro ao buscar participantes do agendamento {agendamento.id}: {e}")
-                        participantes = []
+                try:
+                    participantes = [
+                        {
+                            "id": p.id,
+                            "nome": p.nome,
+                            "email": p.email,
+                            "telefone": getattr(p, 'telefone', None)
+                        }
+                        for p in agendamento.participantes
+                    ]
+                except Exception as e:
+                    print(f"⚠️ Erro ao buscar participantes do agendamento {agendamento.id}: {e}")
+                    participantes = []
                 
                 agendamento_dict = {
                     "id": agendamento.id,
@@ -104,14 +93,19 @@ async def listar_agendamentos(skip: int = 0, limit: int = 100, db: Session = Dep
                     "duracao_em_minutos": agendamento.duracao_em_minutos,
                     "local": agendamento.local,
                     "participantes": participantes,
-                    "data_criacao": agendamento.data_criacao.isoformat() if hasattr(agendamento, 'data_criacao') and agendamento.data_criacao else None
+                    "data_criacao": agendamento.data_criacao.isoformat() if agendamento.data_criacao else None,
+                    "data_atualizacao": agendamento.data_atualizacao.isoformat() if agendamento.data_atualizacao else None,
+                    # Propriedades calculadas do seu modelo
+                    "participantes_count": len(participantes),
+                    "duracao_formatada": agendamento.duracao_formatada,
+                    "status_cor": agendamento.status_cor
                 }
-                resultado.append(agendamento_dict)
+                agendamentos_processados.append(agendamento_dict)
                 
             except Exception as e:
                 print(f"❌ Erro ao processar agendamento {agendamento.id}: {e}")
                 # Incluir agendamento básico mesmo com erro
-                resultado.append({
+                agendamentos_processados.append({
                     "id": agendamento.id,
                     "titulo": getattr(agendamento, 'titulo', 'Título não disponível'),
                     "data_hora": agendamento.data_hora.isoformat() if agendamento.data_hora else None,
@@ -121,10 +115,26 @@ async def listar_agendamentos(skip: int = 0, limit: int = 100, db: Session = Dep
                     "duracao_em_minutos": getattr(agendamento, 'duracao_em_minutos', 60),
                     "local": getattr(agendamento, 'local', None),
                     "participantes": [],
+                    "participantes_count": 0,
                     "error": f"Erro ao processar: {str(e)}"
                 })
         
-        return resultado
+        # Calcular metadados de paginação
+        total_paginas = (total + limit - 1) // limit  # Ceiling division
+        
+        print(f"✅ Retornando {len(agendamentos_processados)} agendamentos de {total} total")
+        
+        return AgendamentoPaginado(
+            agendamentos=agendamentos_processados,
+            total=total,
+            pagina=pagina,
+            totalPaginas=total_paginas,
+            limit=limit,
+            skip=skip,
+            filtro=filtro,
+            temProxima=pagina < total_paginas,
+            temAnterior=pagina > 1
+        )
         
     except Exception as e:
         print(f"❌ Erro ao buscar agendamentos: {e}")
@@ -132,43 +142,74 @@ async def listar_agendamentos(skip: int = 0, limit: int = 100, db: Session = Dep
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erro ao buscar agendamentos: {str(e)}")
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
-async def criar_agendamento(agendamento_data: dict, db: Session = Depends(get_db)):
+def aplicar_filtros_agendamento(query, count_query, filtro: str):
     """
-    Criar um novo agendamento - versão segura
+    Aplicar filtros nas queries baseado no tipo de filtro - Adaptado para seu modelo
+    """
+    hoje = datetime.now().date()
+    inicio_hoje = datetime.combine(hoje, datetime.min.time())
+    fim_hoje = datetime.combine(hoje + timedelta(days=1), datetime.min.time())
+    
+    # Calcular início da semana (domingo = 0)
+    dias_desde_domingo = hoje.weekday() + 1 if hoje.weekday() != 6 else 0
+    inicio_semana = datetime.combine(hoje - timedelta(days=dias_desde_domingo), datetime.min.time())
+    
+    # Calcular início do mês
+    inicio_mes = datetime.combine(hoje.replace(day=1), datetime.min.time())
+    
+    if filtro == "hoje":
+        filtro_condicao = and_(
+            models.Agendamento.data_hora >= inicio_hoje,
+            models.Agendamento.data_hora < fim_hoje
+        )
+    elif filtro == "semana":
+        filtro_condicao = models.Agendamento.data_hora >= inicio_semana
+    elif filtro == "mes":
+        filtro_condicao = models.Agendamento.data_hora >= inicio_mes
+    elif filtro in ["reuniao", "consulta", "evento"]:
+        filtro_condicao = models.Agendamento.tipo_sessao == filtro
+    elif filtro == "agendado":
+        filtro_condicao = models.Agendamento.status == "agendado"
+    elif filtro == "confirmado":
+        filtro_condicao = models.Agendamento.status == "confirmado"
+    elif filtro == "realizado":
+        filtro_condicao = models.Agendamento.status == "realizado"
+    elif filtro == "cancelado":
+        filtro_condicao = models.Agendamento.status == "cancelado"
+    else:  # "todos"
+        filtro_condicao = None
+    
+    if filtro_condicao is not None:
+        query = query.filter(filtro_condicao)
+        count_query = count_query.filter(filtro_condicao)
+    
+    return {"query": query, "count_query": count_query}
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCreate, db: Session = Depends(get_db)):
+    """
+    Criar um novo agendamento - Mantendo sua lógica existente
     """
     try:
-        print(f"📝 Dados recebidos para criação: {agendamento_data}")
+        print(f"📝 Dados recebidos para criação: {agendamento_data.dict()}")
         
-        # Validação básica manual
-        if not agendamento_data.get('titulo'):
-            raise HTTPException(status_code=400, detail="Título é obrigatório")
-        
-        if not agendamento_data.get('data'):
-            raise HTTPException(status_code=400, detail="Data é obrigatória")
-            
-        if not agendamento_data.get('hora'):
-            raise HTTPException(status_code=400, detail="Hora é obrigatória")
-        
-        # Combinar data e hora
+        # Combinar data e hora usando seu formato
         try:
-            data_str = agendamento_data['data']
-            hora_str = agendamento_data['hora']
-            data_hora_str = f"{data_str} {hora_str}:00"
+            data_hora_str = f"{agendamento_data.data} {agendamento_data.hora}:00"
             data_hora = datetime.strptime(data_hora_str, "%Y-%m-%d %H:%M:%S")
         except ValueError as e:
             raise HTTPException(status_code=400, detail=f"Formato de data/hora inválido: {str(e)}")
         
-        # Criar agendamento
+        # Criar agendamento usando sua estrutura
         db_agendamento = models.Agendamento(
-            titulo=agendamento_data['titulo'],
-            usuario_id=agendamento_data.get('participantes_ids', [1])[0] if agendamento_data.get('participantes_ids') else 1,
+            titulo=agendamento_data.titulo,
+            usuario_id=agendamento_data.participantes_ids[0] if agendamento_data.participantes_ids else 1,
             data_hora=data_hora,
-            tipo_sessao=agendamento_data.get('tipo_sessao', 'reuniao'),
+            tipo_sessao=agendamento_data.tipo_sessao,
             status='agendado',
-            observacoes=agendamento_data.get('descricao'),
-            duracao_em_minutos=agendamento_data.get('duracao_em_minutos', 60),
-            local=agendamento_data.get('local')
+            observacoes=agendamento_data.descricao,
+            duracao_em_minutos=agendamento_data.duracao_em_minutos,
+            local=agendamento_data.local
         )
         
         db.add(db_agendamento)
@@ -177,38 +218,26 @@ async def criar_agendamento(agendamento_data: dict, db: Session = Depends(get_db
         print(f"✅ Agendamento criado com ID: {db_agendamento.id}")
         
         # Adicionar participantes se houver
-        participantes_ids = agendamento_data.get('participantes_ids', [])
-        if participantes_ids:
+        if agendamento_data.participantes_ids:
             try:
                 participantes = db.query(models.Cadastro).filter(
-                    models.Cadastro.id.in_(participantes_ids)
+                    models.Cadastro.id.in_(agendamento_data.participantes_ids)
                 ).all()
                 
                 print(f"👥 Encontrados {len(participantes)} participantes para adicionar")
                 
                 for participante in participantes:
-                    if hasattr(db_agendamento, 'participantes'):
-                        db_agendamento.participantes.append(participante)
-                        print(f"✅ Participante {participante.nome} adicionado")
-                    else:
-                        print("⚠️ Relacionamento participantes não disponível")
+                    db_agendamento.participantes.append(participante)
+                    print(f"✅ Participante {participante.nome} adicionado")
                         
             except Exception as e:
                 print(f"⚠️ Erro ao adicionar participantes: {e}")
-                # Continuar mesmo sem participantes
         
         db.commit()
         db.refresh(db_agendamento)
         
-        # Retornar resposta manual
-        return {
-            "id": db_agendamento.id,
-            "titulo": db_agendamento.titulo,
-            "data_hora": db_agendamento.data_hora.isoformat(),
-            "tipo_sessao": db_agendamento.tipo_sessao,
-            "status": db_agendamento.status,
-            "message": "Agendamento criado com sucesso"
-        }
+        # Retornar resposta usando o schema existente
+        return agendamento_schema.AgendamentoResponse.from_orm(db_agendamento)
         
     except HTTPException:
         raise
@@ -219,49 +248,24 @@ async def criar_agendamento(agendamento_data: dict, db: Session = Depends(get_db
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erro ao criar agendamento: {str(e)}")
 
-@router.get("/{agendamento_id}")
+@router.get("/{agendamento_id}", response_model=agendamento_schema.AgendamentoResponse)
 async def obter_agendamento(agendamento_id: int, db: Session = Depends(get_db)):
     """
-    Obter um agendamento específico por ID
+    Obter um agendamento específico por ID - Mantendo sua lógica
     """
     try:
         print(f"🔍 Buscando agendamento ID: {agendamento_id}")
         
-        db_agendamento = db.query(models.Agendamento).filter(
+        db_agendamento = db.query(models.Agendamento).options(
+            joinedload(models.Agendamento.participantes)
+        ).filter(
             models.Agendamento.id == agendamento_id
         ).first()
         
         if db_agendamento is None:
             raise HTTPException(status_code=404, detail="Agendamento não encontrado")
         
-        # Retornar como dicionário
-        resultado = {
-            "id": db_agendamento.id,
-            "titulo": db_agendamento.titulo,
-            "data_hora": db_agendamento.data_hora.isoformat() if db_agendamento.data_hora else None,
-            "tipo_sessao": db_agendamento.tipo_sessao,
-            "status": db_agendamento.status,
-            "observacoes": db_agendamento.observacoes,
-            "duracao_em_minutos": db_agendamento.duracao_em_minutos,
-            "local": db_agendamento.local,
-            "participantes": []
-        }
-        
-        # Tentar buscar participantes
-        try:
-            if hasattr(db_agendamento, 'participantes'):
-                resultado["participantes"] = [
-                    {
-                        "id": p.id,
-                        "nome": p.nome,
-                        "email": p.email
-                    }
-                    for p in db_agendamento.participantes
-                ]
-        except Exception as e:
-            print(f"⚠️ Erro ao buscar participantes: {e}")
-        
-        return resultado
+        return agendamento_schema.AgendamentoResponse.from_orm(db_agendamento)
         
     except HTTPException:
         raise
@@ -269,6 +273,165 @@ async def obter_agendamento(agendamento_id: int, db: Session = Depends(get_db)):
         print(f"❌ Erro ao buscar agendamento: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao buscar agendamento: {str(e)}")
 
+@router.put("/{agendamento_id}", response_model=agendamento_schema.AgendamentoResponse)
+async def atualizar_agendamento(
+    agendamento_id: int, 
+    agendamento_data: agendamento_schema.AgendamentoUpdate, 
+    db: Session = Depends(get_db)
+):
+    """
+    Atualizar agendamento existente
+    """
+    try:
+        db_agendamento = db.query(models.Agendamento).filter(
+            models.Agendamento.id == agendamento_id
+        ).first()
+        
+        if not db_agendamento:
+            raise HTTPException(status_code=404, detail="Agendamento não encontrado")
+        
+        # Atualizar campos fornecidos
+        dados_atualizacao = agendamento_data.dict(exclude_unset=True)
+        
+        # Processar data e hora se fornecidos
+        if 'data' in dados_atualizacao and 'hora' in dados_atualizacao:
+            try:
+                data_hora_str = f"{dados_atualizacao['data']} {dados_atualizacao['hora']}:00"
+                dados_atualizacao['data_hora'] = datetime.strptime(data_hora_str, "%Y-%m-%d %H:%M:%S")
+                del dados_atualizacao['data']
+                del dados_atualizacao['hora']
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=f"Formato de data/hora inválido: {str(e)}")
+        
+        # Mapear campos do schema para o modelo
+        if 'descricao' in dados_atualizacao:
+            dados_atualizacao['observacoes'] = dados_atualizacao.pop('descricao')
+        
+        # Atualizar participantes se fornecidos
+        if 'participantes_ids' in dados_atualizacao:
+            participantes_ids = dados_atualizacao.pop('participantes_ids')
+            if participantes_ids:
+                participantes = db.query(models.Cadastro).filter(
+                    models.Cadastro.id.in_(participantes_ids)
+                ).all()
+                db_agendamento.participantes = participantes
+        
+        # Atualizar demais campos
+        for campo, valor in dados_atualizacao.items():
+            if hasattr(db_agendamento, campo):
+                setattr(db_agendamento, campo, valor)
+        
+        db_agendamento.data_atualizacao = datetime.now()
+        
+        db.commit()
+        db.refresh(db_agendamento)
+        
+        print(f"✅ Agendamento {agendamento_id} atualizado com sucesso")
+        return agendamento_schema.AgendamentoResponse.from_orm(db_agendamento)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Erro ao atualizar agendamento {agendamento_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao atualizar agendamento: {str(e)}")
+
+@router.delete("/{agendamento_id}")
+async def excluir_agendamento(agendamento_id: int, db: Session = Depends(get_db)):
+    """
+    Excluir agendamento
+    """
+    try:
+        db_agendamento = db.query(models.Agendamento).filter(
+            models.Agendamento.id == agendamento_id
+        ).first()
+        
+        if not db_agendamento:
+            raise HTTPException(status_code=404, detail="Agendamento não encontrado")
+        
+        titulo = db_agendamento.titulo
+        db.delete(db_agendamento)
+        db.commit()
+        
+        print(f"✅ Agendamento '{titulo}' excluído com sucesso")
+        return {"message": "Agendamento excluído com sucesso", "id": agendamento_id}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Erro ao excluir agendamento {agendamento_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao excluir agendamento: {str(e)}")
+
+@router.get("/stats/resumo")
+async def obter_estatisticas_agendamentos(db: Session = Depends(get_db)):
+    """
+    Obter estatísticas dos agendamentos para dashboard
+    """
+    try:
+        hoje = datetime.now().date()
+        inicio_hoje = datetime.combine(hoje, datetime.min.time())
+        fim_hoje = datetime.combine(hoje + timedelta(days=1), datetime.min.time())
+        
+        dias_desde_domingo = hoje.weekday() + 1 if hoje.weekday() != 6 else 0
+        inicio_semana = datetime.combine(hoje - timedelta(days=dias_desde_domingo), datetime.min.time())
+        
+        inicio_mes = datetime.combine(hoje.replace(day=1), datetime.min.time())
+        
+        # Contar estatísticas usando seu modelo
+        total = db.query(func.count(models.Agendamento.id)).scalar()
+        
+        hoje_count = db.query(func.count(models.Agendamento.id)).filter(
+            and_(models.Agendamento.data_hora >= inicio_hoje, models.Agendamento.data_hora < fim_hoje)
+        ).scalar()
+        
+        semana_count = db.query(func.count(models.Agendamento.id)).filter(
+            models.Agendamento.data_hora >= inicio_semana
+        ).scalar()
+        
+        mes_count = db.query(func.count(models.Agendamento.id)).filter(
+            models.Agendamento.data_hora >= inicio_mes
+        ).scalar()
+        
+        # Por tipo de sessão
+        reunioes_count = db.query(func.count(models.Agendamento.id)).filter(
+            models.Agendamento.tipo_sessao == "reuniao"
+        ).scalar()
+        
+        consultas_count = db.query(func.count(models.Agendamento.id)).filter(
+            models.Agendamento.tipo_sessao == "consulta"
+        ).scalar()
+        
+        eventos_count = db.query(func.count(models.Agendamento.id)).filter(
+            models.Agendamento.tipo_sessao == "evento"
+        ).scalar()
+        
+        # Por status
+        agendados_count = db.query(func.count(models.Agendamento.id)).filter(
+            models.Agendamento.status == "agendado"
+        ).scalar()
+        
+        confirmados_count = db.query(func.count(models.Agendamento.id)).filter(
+            models.Agendamento.status == "confirmado"
+        ).scalar()
+        
+        return {
+            "total": total,
+            "hoje": hoje_count,
+            "esta_semana": semana_count,
+            "este_mes": mes_count,
+            "reunioes": reunioes_count,
+            "consultas": consultas_count,
+            "eventos": eventos_count,
+            "agendados": agendados_count,
+            "confirmados": confirmados_count
+        }
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar estatísticas: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar estatísticas: {str(e)}")
+
+# Manter seu endpoint de teste existente
 @router.get("/test/database")
 async def test_database(db: Session = Depends(get_db)):
     """

@@ -32,13 +32,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Inclusão dos routers
-app.include_router(agendamento.router)
+# ✅ Inclusão dos routers (organizado e sem duplicação)
+app.include_router(agendamento.router, prefix="/api")  # Para usar /api/agendamentos/
 app.include_router(cadastro.router)
 app.include_router(funcionario.router)
 app.include_router(login.router)
 app.include_router(dashboard.router)
-app.include_router(login.router) # Você pode remover essa segunda inclusão
 
 # ✅ Rota principal
 @app.get("/")
@@ -47,7 +46,23 @@ async def root():
         "message": "Sistema de Agendamentos - API",
         "version": "1.0.0",
         "status": "online",
-        "login": "POST /auth/login (usuário: admin, senha: 123456)"
+        "endpoints": {
+            "agendamentos": "/api/agendamentos/",
+            "cadastros": "/cadastros/",
+            "funcionarios": "/funcionarios/",
+            "login": "/auth/login",
+            "dashboard": "/dashboard/",
+            "docs": "/docs"
+        }
+    }
+
+# ✅ Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0"
     }
 
 # ✅ Nova rota para /login/ que chama a função de login do router /auth
@@ -55,7 +70,7 @@ async def root():
 async def login_sem_auth(login_data: login.LoginRequest):
     return await login.login(login_data)
 
-# ✅ Listagem de cadastros
+# ✅ Listagem de cadastros (mantido para compatibilidade)
 @app.get("/cadastros/")
 async def listar_cadastros(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     try:
@@ -73,7 +88,7 @@ async def obter_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ✅ Listagem de funcionários
+# ✅ Listagem de funcionários (mantido para compatibilidade)
 @app.get("/funcionarios/")
 async def listar_funcionarios(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     try:
@@ -81,72 +96,33 @@ async def listar_funcionarios(skip: int = 0, limit: int = 100, db: Session = Dep
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ✅ Criação de agendamento
-@app.post("/api/agendamentos/")
-def criar_agendamento(agendamento: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    try:
-        data_hora = datetime.strptime(f"{agendamento['data']} {agendamento['hora']}", "%Y-%m-%d %H:%M")
+# ⚠️ REMOVIDO: Rotas duplicadas de agendamento
+# As rotas de agendamento agora estão todas centralizadas no router /api/agendamentos/
+# Removidas as rotas duplicadas que estavam causando conflito
 
-        novo_agendamento = models.Agendamento(
-            titulo=agendamento["titulo"],
-            data_hora=data_hora,
-            local=agendamento.get("local", ""),
-            duracao_em_minutos=agendamento.get("duracao_em_minutos", 60),
-            usuario_id=1,
-            profissional_responsavel_id=None,
-            observacoes=agendamento.get("descricao", "")
-        )
-
-        participantes = db.query(models.Cadastro).filter(
-            models.Cadastro.id.in_(agendamento["participantes_ids"])
-        ).all()
-
-        novo_agendamento.participantes = participantes
-
-        db.add(novo_agendamento)
-        db.commit()
-        db.refresh(novo_agendamento)
-
-        for participante in participantes:
-            email_destino = (participante.email or "").strip()
-            if not email_destino:
-                continue
-
-            context = {
-                "nome": participante.nome,
-                "titulo": novo_agendamento.titulo,
-                "data_hora": data_hora.strftime("%d/%m/%Y %H:%M"),
-                "local": novo_agendamento.local,
-                "descricao": novo_agendamento.observacoes
-            }
-
-            enviar_email_background(
-                background_tasks,
-                destinatario=email_destino,
-                assunto="Novo Agendamento",
-                template_name="agendamento.html",
-                context=context
-            )
-
-        return {"msg": "Agendamento criado e e-mails enviados"}
-
-    except Exception:
-        raise HTTPException(status_code=500, detail="Erro ao criar agendamento")
-
-# ✅ Listagem de agendamentos
-@app.get("/api/agendamentos/")
-def listar_agendamentos(db: Session = Depends(get_db)):
-    try:
-        agendamentos = db.query(models.Agendamento).all()
-        return agendamentos
-    except Exception:
-        raise HTTPException(status_code=500, detail="Erro ao listar agendamentos")
-
-# ✅ Evento de startup
+# ✅ Eventos de startup e shutdown
 @app.on_event("startup")
 async def startup_event():
     print("🚀 Sistema de Agendamentos iniciado!")
+    print(f"📖 Documentação disponível em: http://localhost:8000/docs")
+    print(f"🔗 API Agendamentos: http://localhost:8000/api/agendamentos/")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("🛑 Sistema de Agendamentos encerrado")
+
+# ✅ Handler global para erros
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    print(f"❌ Erro global: {str(exc)}")
+    return HTTPException(status_code=500, detail="Erro interno do servidor")
 
 # ✅ Execução da aplicação
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
+    uvicorn.run(
+        "main:app", 
+        host="0.0.0.0", 
+        port=8000, 
+        reload=True, 
+        log_level="info"
+    )
