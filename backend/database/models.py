@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Table, Boolean, Date, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.database.database import Base
+from backend.database.database import Base
 
 # Tabela associativa para relação many-to-many entre Agendamentos e Cadastros
 agendamento_participantes = Table(

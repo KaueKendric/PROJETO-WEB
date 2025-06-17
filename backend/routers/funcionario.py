@@ -3,9 +3,9 @@ from typing import List
 
 from sqlalchemy.orm import Session
 
-from app.database import models
-from app.database.database import get_db
-from app.schemas import funcionario as funcionario_schema
+from backend.database import models
+from backend.database.database import get_db
+from backend.schemas import funcionario as funcionario_schema
 
 router = APIRouter(
     prefix="/funcionarios",

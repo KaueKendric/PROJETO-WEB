@@ -3,9 +3,9 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.database import models
-from app.database.database import get_db
-from app.schemas import cadastro as cadastro_schema
+from backend.database import models
+from backend.database.database import get_db
+from backend.schemas import cadastro as cadastro_schema
 
 router = APIRouter(
     prefix="/cadastros",

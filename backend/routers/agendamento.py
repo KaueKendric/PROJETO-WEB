@@ -4,12 +4,12 @@ from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 
-from app.database.database import get_db
-from app.database import models
+from backend.database.database import get_db
+from backend.database import models
 
 # Imports dos schemas - usando import seguro
 try:
-    from app.schemas import agendamento as agendamento_schema
+    from backend.schemas import agendamento as agendamento_schema
     print("✅ Schemas importados com sucesso")
 except ImportError as e:
     print(f"⚠️ Erro ao importar schemas: {e}")

@@ -5,11 +5,11 @@ import uvicorn
 from datetime import datetime
 
 # IMPORTAÇÕES DO SISTEMA
-from app.database.database import get_db, engine
-from app.database import models
-from app.utils import auth
-from app.utils.email import enviar_email_background
-from app.routers import agendamento, cadastro, funcionario, login, dashboard
+from backend.database.database import get_db, engine
+from backend.database import models
+from backend.utils import auth
+from backend.utils.email import enviar_email_background
+from backend.routers import agendamento, cadastro, funcionario, login, dashboard
 
 # ✅ Criação das tabelas no banco
 models.Base.metadata.create_all(bind=engine)
@@ -38,7 +38,7 @@ app.include_router(cadastro.router)
 app.include_router(funcionario.router)
 app.include_router(login.router)
 app.include_router(dashboard.router)
-app.include_router(login.router)
+app.include_router(login.router) # Você pode remover essa segunda inclusão
 
 # ✅ Rota principal
 @app.get("/")
@@ -49,6 +49,11 @@ async def root():
         "status": "online",
         "login": "POST /auth/login (usuário: admin, senha: 123456)"
     }
+
+# ✅ Nova rota para /login/ que chama a função de login do router /auth
+@app.post("/login/", response_model=login.LoginResponse)
+async def login_sem_auth(login_data: login.LoginRequest):
+    return await login.login(login_data)
 
 # ✅ Listagem de cadastros
 @app.get("/cadastros/")
@@ -87,7 +92,7 @@ def criar_agendamento(agendamento: dict, background_tasks: BackgroundTasks, db: 
             data_hora=data_hora,
             local=agendamento.get("local", ""),
             duracao_em_minutos=agendamento.get("duracao_em_minutos", 60),
-            usuario_id=1,  # Login fixo por enquanto
+            usuario_id=1,
             profissional_responsavel_id=None,
             observacoes=agendamento.get("descricao", "")
         )
