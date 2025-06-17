@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, LogIn, AlertCircle, Eye, EyeOff, Shield, Mail, Phone, Sparkles, ArrowRight, Star } from 'lucide-react';
+import fetchApi from '../utils/fetchApi';
 
 function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -16,7 +17,7 @@ function LoginPage({ onLogin }) {
 
   useEffect(() => {
     setMounted(true);
-    
+
     // Efeito de movimento do mouse
     const handleMouseMove = (e) => {
       if (containerRef.current) {
@@ -38,11 +39,11 @@ function LoginPage({ onLogin }) {
     event.preventDefault();
     setError('');
     setIsLoading(true);
-  
+
     console.log("Tentativa de login com:", { username, password });
-  
+
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetchApi(`/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,22 +53,23 @@ function LoginPage({ onLogin }) {
           password: password
         })
       });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
+
+      console.log(response)
+      const data = response;
+
+      if (response) {
         console.log('✅ Login bem-sucedido:', data);
-  
+
         // Salvar token no localStorage (opcional)
         localStorage.setItem('token', data.token);
-  
+
         onLogin(true);
         navigate('/dashboard');
       } else {
         console.log('❌ Erro no login:', data);
         setError(data.detail || 'Credenciais inválidas. Verifique seu usuário e senha.');
       }
-  
+
     } catch (error) {
       console.log('❌ Erro na conexão:', error);
       setError('Erro de conexão. Verifique sua internet e tente novamente.');
@@ -75,7 +77,7 @@ function LoginPage({ onLogin }) {
       setIsLoading(false);
     }
   };
-  
+
 
   // Criar partículas flutuantes
   const createParticles = () => {
@@ -93,37 +95,37 @@ function LoginPage({ onLogin }) {
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center p-4 relative overflow-hidden"
     >
-      
+
       {/* Background premium com efeito parallax */}
       <div className="absolute inset-0">
         {/* Gradiente base animado */}
-        <div 
+        <div
           className="absolute inset-0 opacity-60"
           style={{
             background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(139, 92, 246, 0.1), transparent 40%)`
           }}
         ></div>
-        
+
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/30 via-purple-900/40 to-pink-900/30"></div>
-        
+
         {/* Elementos geométricos animados */}
         <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-500/5 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         <div className="absolute top-2/3 left-1/3 w-64 h-64 bg-pink-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        
+
         {/* Grid pattern sutil */}
-        <div 
+        <div
           className="absolute inset-0 opacity-[0.015]"
           style={{
             backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.4) 1px, transparent 0)',
             backgroundSize: '60px 60px'
           }}
         ></div>
-        
+
         {/* Linhas diagonais decorativas */}
         <div className="absolute top-0 left-0 w-full h-full">
           <div className="absolute top-1/4 left-0 w-1/3 h-px bg-gradient-to-r from-transparent via-purple-400/20 to-transparent transform rotate-45"></div>
@@ -135,20 +137,20 @@ function LoginPage({ onLogin }) {
           {createParticles()}
         </div>
       </div>
-      
+
       {/* Container principal */}
       <div className={`relative z-10 w-full max-w-md transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-        
+
         {/* Card principal com borda animada */}
         <div className="relative group">
           {/* Brilho exterior animado */}
           <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-[2rem] blur-lg group-hover:blur-xl transition-all duration-500"></div>
-          
+
           {/* Borda animada */}
           <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/30 via-pink-500/30 to-purple-500/30 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-all duration-500 animate-pulse"></div>
-          
+
           <div className="relative bg-white/[0.08] backdrop-blur-2xl rounded-[2rem] p-8 lg:p-10 shadow-2xl border border-white/10">
-            
+
             {/* Decoração flutuante premium */}
             <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
               <div className="relative group">
@@ -156,7 +158,7 @@ function LoginPage({ onLogin }) {
                   <Shield size={28} className="text-white" />
                 </div>
                 <div className="absolute -inset-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
-                
+
                 {/* Estrelas decorativas */}
                 <Star size={8} className="absolute -top-2 -left-2 text-purple-300/60 animate-pulse" />
                 <Star size={6} className="absolute -bottom-1 -right-2 text-pink-300/60 animate-pulse" style={{ animationDelay: '0.5s' }} />
@@ -199,7 +201,7 @@ function LoginPage({ onLogin }) {
 
             {/* Formulário ultra premium */}
             <form onSubmit={handleSubmit} className="space-y-7">
-              
+
               {/* Campo Usuário premium */}
               <div className="space-y-3">
                 <label className="block text-white/90 text-sm font-medium tracking-wide">
@@ -208,7 +210,7 @@ function LoginPage({ onLogin }) {
                 <div className="relative group">
                   {/* Efeito de brilho no focus */}
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 rounded-2xl blur-sm opacity-0 group-focus-within:opacity-100 transition-all duration-500"></div>
-                  
+
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                       <User size={20} className="text-purple-300/60 group-focus-within:text-purple-200 group-focus-within:scale-110 transition-all duration-300" />
@@ -221,7 +223,7 @@ function LoginPage({ onLogin }) {
                       className="relative w-full pl-14 pr-5 py-5 bg-white/[0.05] border border-white/10 rounded-2xl text-white placeholder-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-400/40 focus:border-purple-400/40 transition-all duration-300 backdrop-blur-sm hover:bg-white/[0.08]"
                       placeholder="Digite seu usuário"
                     />
-                    
+
                     {/* Indicador de preenchimento */}
                     {username && (
                       <div className="absolute inset-y-0 right-5 flex items-center">
@@ -240,7 +242,7 @@ function LoginPage({ onLogin }) {
                 <div className="relative group">
                   {/* Efeito de brilho no focus */}
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 rounded-2xl blur-sm opacity-0 group-focus-within:opacity-100 transition-all duration-500"></div>
-                  
+
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                       <Lock size={20} className="text-purple-300/60 group-focus-within:text-purple-200 group-focus-within:scale-110 transition-all duration-300" />
@@ -260,17 +262,16 @@ function LoginPage({ onLogin }) {
                     >
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
-                    
+
                     {/* Indicador de força da senha */}
                     {password && (
                       <div className="absolute -bottom-1 left-5 right-14">
                         <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full transition-all duration-300 ${
-                              password.length < 4 ? 'w-1/4 bg-red-400' :
+                          <div
+                            className={`h-full transition-all duration-300 ${password.length < 4 ? 'w-1/4 bg-red-400' :
                               password.length < 8 ? 'w-2/4 bg-yellow-400' :
-                              'w-full bg-green-400'
-                            }`}
+                                'w-full bg-green-400'
+                              }`}
                           ></div>
                         </div>
                       </div>
@@ -310,13 +311,13 @@ function LoginPage({ onLogin }) {
               >
                 {/* Background base */}
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600"></div>
-                
+
                 {/* Overlay animado */}
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600/90 via-pink-600/90 to-purple-600/90 opacity-0 group-hover:opacity-100 transition-all duration-300"></div>
-                
+
                 {/* Brilho que atravessa */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
-                
+
                 {/* Conteúdo */}
                 <div className="relative flex items-center justify-center gap-3 font-bold text-white text-lg">
                   {isLoading ? (

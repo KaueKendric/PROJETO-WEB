@@ -7,10 +7,8 @@ import secrets
 # 🔐 Security para proteger rotas
 security = HTTPBearer(auto_error=False)
 
-router = APIRouter(
-    prefix="/auth",
-    tags=["Autenticação"]
-)
+router = APIRouter(prefix="/auth", tags=["Autenticação"])
+
 
 # ==========================================
 # SCHEMAS
@@ -19,11 +17,13 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+
 class LoginResponse(BaseModel):
     success: bool
     message: str
     user: Optional[dict] = None
     token: Optional[str] = None
+
 
 # ==========================================
 # Função auxiliar de geração de token fake
@@ -31,25 +31,24 @@ class LoginResponse(BaseModel):
 def generate_token() -> str:
     return secrets.token_urlsafe(32)
 
+
 # ==========================================
 # ROTAS DE AUTENTICAÇÃO
 # ==========================================
+
 
 @router.post("/login", response_model=LoginResponse)
 async def login(login_data: LoginRequest):
     """
     Login fixo com usuário admin / senha 123456
     """
+
     if login_data.email == "admin" and login_data.password == "123456":
         return LoginResponse(
             success=True,
             message="Login realizado com sucesso",
-            user={
-                "id": 1,
-                "nome": "Admin",
-                "email": "admin"
-            },
-            token=generate_token()
+            user={"id": 1, "nome": "Admin", "email": "admin"},
+            token=generate_token(),
         )
     else:
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
@@ -60,29 +59,20 @@ async def logout():
     """
     Logout do usuário
     """
-    return {
-        "success": True,
-        "message": "Logout realizado com sucesso"
-    }
+    return {"success": True, "message": "Logout realizado com sucesso"}
 
 
 @router.get("/me")
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
     """
     Obter dados do usuário atual (simulado com token)
     """
     if not credentials:
-        raise HTTPException(
-            status_code=401,
-            detail="Token de autenticação necessário"
-        )
+        raise HTTPException(status_code=401, detail="Token de autenticação necessário")
 
-    return {
-        "id": 1,
-        "nome": "Admin",
-        "email": "admin",
-        "authenticated": True
-    }
+    return {"id": 1, "nome": "Admin", "email": "admin", "authenticated": True}
 
 
 @router.get("/check")
@@ -97,9 +87,10 @@ async def check_auth():
             "login": "POST /auth/login",
             "logout": "POST /auth/logout",
             "me": "GET /auth/me",
-            "check": "GET /auth/check"
-        }
+            "check": "GET /auth/check",
+        },
     }
+
 
 # ✅ Aceitar tanto /login como /login/
 @router.post("/login/", response_model=LoginResponse)

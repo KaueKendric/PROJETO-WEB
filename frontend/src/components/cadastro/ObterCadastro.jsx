@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, AlertCircle, User, Mail, Phone, Calendar, MapPin, Filter, X } from 'lucide-react';
+import fetchApi from '../../utils/fetchApi';
 
 function ObterCadastro() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -8,9 +9,23 @@ function ObterCadastro() {
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
 
+  // Função para formatar data
+  const formatarData = (data) => {
+    if (!data) return '';
+
+    // Se já está no formato ISO (YYYY-MM-DD)
+    if (data.includes('-')) {
+      const [ano, mes, dia] = data.split('-');
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    // Se está no formato brasileiro (DD/MM/YYYY)
+    return data;
+  };
+
   const buscarDados = async () => {
     if (!searchTerm.trim()) {
-      setErro('Por favor, insira um nome ou ID para pesquisa.');
+      setErro('Por favor, insira um nome, email ou ID para pesquisa.');
       return;
     }
 
@@ -25,26 +40,52 @@ function ObterCadastro() {
 
       if (isNumeric) {
         // Busca por ID específico
-        const response = await fetch(`http://localhost:8000/cadastros/${searchTerm.trim()}`);
+        console.log(`🔍 Buscando cadastro por ID: ${searchTerm.trim()}`);
+        const response = await fetchApi(`/api/cadastros/${searchTerm.trim()}`);
+
         if (response.status === 404) {
           throw new Error('Cadastro não encontrado com este ID.');
         }
-        if (!response.ok) {
-          throw new Error('Erro ao buscar cadastro por ID.');
+        if (!response) {
+          const errorText = await response.text();
+          throw new Error(`Erro ao buscar cadastro por ID: ${response.status} - ${errorText}`);
         }
-        data = [await response.json()];
+
+        const cadastro =  response;
+        data = [cadastro];
       } else {
-        // Busca por nome
-        const response = await fetch('http://localhost:8000/cadastros/');
-        if (!response.ok) {
-          throw new Error('Erro ao buscar lista de cadastros.');
-        }
-        const todos = await response.json();
-        data = todos.filter(c => 
-          c.nome.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
-          c.email.toLowerCase().includes(searchTerm.trim().toLowerCase())
+        // Busca por nome/email usando a API paginada
+        console.log(`🔍 Buscando cadastros com filtro: "${searchTerm.trim()}"`);
+
+        // Usar a API paginada com filtro
+        const response = await fetchApi(
+          `/api/cadastros/?limit=50&skip=0&filtro=${encodeURIComponent(searchTerm.trim())}`
         );
+
+        if (!response) {
+          const errorText = await response.text();
+          throw new Error(`Erro ao buscar cadastros: ${response.status} - ${errorText}`);
+        }
+
+        const responseData = response;
+        console.log('📡 Resposta da API:', responseData);
+
+        // Verificar formato da resposta
+        if (responseData.cadastros && Array.isArray(responseData.cadastros)) {
+          // Resposta paginada
+          data = responseData.cadastros;
+        } else if (Array.isArray(responseData)) {
+          // Resposta simples (fallback)
+          data = responseData.filter(c =>
+            c.nome.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+            c.email.toLowerCase().includes(searchTerm.trim().toLowerCase())
+          );
+        } else {
+          throw new Error('Formato de resposta inesperado da API');
+        }
       }
+
+      console.log(`✅ Encontrados ${data.length} cadastros`);
 
       if (data.length === 0) {
         setErro('Nenhum cadastro encontrado com o termo pesquisado.');
@@ -54,6 +95,7 @@ function ObterCadastro() {
         setResultados(data);
       }
     } catch (error) {
+      console.error('❌ Erro na busca:', error);
       setErro(error.message);
     } finally {
       setCarregando(false);
@@ -99,7 +141,7 @@ function ObterCadastro() {
               className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm hover:bg-white/10"
             />
           </div>
-          
+
           <div className="flex gap-3">
             <button
               onClick={buscarDados}
@@ -108,7 +150,7 @@ function ObterCadastro() {
             >
               {/* Brilho animado */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              
+
               <div className="relative flex items-center gap-3">
                 {carregando ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
@@ -118,7 +160,7 @@ function ObterCadastro() {
                 {carregando ? 'Buscando...' : 'Buscar'}
               </div>
             </button>
-            
+
             <button
               onClick={limparBusca}
               className="py-4 px-6 rounded-2xl font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 transition-all duration-300"
@@ -127,7 +169,7 @@ function ObterCadastro() {
             </button>
           </div>
         </div>
-        
+
         <p className="text-white/50 text-sm mt-3 ml-1">
           💡 Dica: Digite um número para buscar por ID ou texto para buscar por nome/email
         </p>
@@ -158,7 +200,7 @@ function ObterCadastro() {
               </span>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white/5 rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-3 mb-2">
@@ -167,15 +209,15 @@ function ObterCadastro() {
               </div>
               <p className="text-white font-semibold text-lg">{cadastroSelecionado.nome}</p>
             </div>
-            
+
             <div className="bg-white/5 rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-3 mb-2">
                 <Mail size={20} className="text-green-400" />
                 <span className="text-white/60 text-sm font-medium">Email</span>
               </div>
-              <p className="text-white font-medium">{cadastroSelecionado.email}</p>
+              <p className="text-white font-medium break-all">{cadastroSelecionado.email}</p>
             </div>
-            
+
             <div className="bg-white/5 rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-3 mb-2">
                 <Phone size={20} className="text-yellow-400" />
@@ -183,15 +225,15 @@ function ObterCadastro() {
               </div>
               <p className="text-white font-medium">{cadastroSelecionado.telefone}</p>
             </div>
-            
+
             <div className="bg-white/5 rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-3 mb-2">
                 <Calendar size={20} className="text-purple-400" />
                 <span className="text-white/60 text-sm font-medium">Data de Nascimento</span>
               </div>
-              <p className="text-white font-medium">{cadastroSelecionado.data_nascimento}</p>
+              <p className="text-white font-medium">{formatarData(cadastroSelecionado.data_nascimento)}</p>
             </div>
-            
+
             {cadastroSelecionado.endereco && (
               <div className="md:col-span-2 bg-white/5 rounded-xl p-4 border border-white/10">
                 <div className="flex items-center gap-3 mb-2">
@@ -199,6 +241,19 @@ function ObterCadastro() {
                   <span className="text-white/60 text-sm font-medium">Endereço</span>
                 </div>
                 <p className="text-white font-medium">{cadastroSelecionado.endereco}</p>
+              </div>
+            )}
+
+            {cadastroSelecionado.data_criacao && (
+              <div className="md:col-span-2 bg-white/5 rounded-xl p-4 border border-white/10">
+                <div className="flex items-center gap-3 mb-2">
+                  <Calendar size={20} className="text-cyan-400" />
+                  <span className="text-white/60 text-sm font-medium">Data de Cadastro</span>
+                </div>
+                <p className="text-white font-medium">
+                  {new Date(cadastroSelecionado.data_criacao).toLocaleDateString('pt-BR')} às {' '}
+                  {new Date(cadastroSelecionado.data_criacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </p>
               </div>
             )}
           </div>
@@ -227,7 +282,7 @@ function ObterCadastro() {
                     ID: {resultado.id}
                   </span>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-white/70">
                     <Mail size={14} className="text-green-400" />
@@ -240,11 +295,11 @@ function ObterCadastro() {
                   {resultado.data_nascimento && (
                     <div className="flex items-center gap-2 text-white/70">
                       <Calendar size={14} className="text-purple-400" />
-                      <span className="text-sm">{resultado.data_nascimento}</span>
+                      <span className="text-sm">{formatarData(resultado.data_nascimento)}</span>
                     </div>
                   )}
                 </div>
-                
+
                 <div className="mt-4 pt-3 border-t border-white/10">
                   <p className="text-purple-400 text-xs font-medium group-hover:text-purple-300 transition-colors">
                     Clique para ver detalhes completos
@@ -262,9 +317,15 @@ function ObterCadastro() {
           <Search size={64} className="mx-auto mb-6 text-white/20" />
           <h3 className="text-2xl font-bold text-white mb-3">Busque por um cadastro específico</h3>
           <p className="text-white/60 max-w-md mx-auto">
-            Use o campo acima para pesquisar por ID (número) ou nome/email (texto). 
+            Use o campo acima para pesquisar por ID (número) ou nome/email (texto).
             Os resultados aparecerão aqui de forma organizada.
           </p>
+          <div className="mt-6 space-y-2 text-white/50 text-sm">
+            <p><strong>Exemplos de busca:</strong></p>
+            <p>• Digite "1" para buscar o cadastro com ID 1</p>
+            <p>• Digite "João" para buscar por nome</p>
+            <p>• Digite "email@exemplo.com" para buscar por email</p>
+          </div>
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, FileText, AlertCircle, Edit2, Trash2, Eye, X } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, FileText, AlertCircle, Edit2, Trash2, Eye, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import fetchApi from '../../utils/fetchApi';
 
 function ListaAgendamento() {
   const [agendamentos, setAgendamentos] = useState([]);
@@ -7,6 +8,12 @@ function ListaAgendamento() {
   const [erro, setErro] = useState('');
   const [filtro, setFiltro] = useState('todos');
   const [agendamentoSelecionado, setAgendamentoSelecionado] = useState(null);
+  
+  // Estados para paginação
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [totalAgendamentos, setTotalAgendamentos] = useState(0);
+  const [carregandoPagina, setCarregandoPagina] = useState(false);
+  const limitePorPagina = 6;
 
   const tiposFiltro = [
     { value: 'todos', label: 'Todos' },
@@ -75,65 +82,100 @@ function ListaAgendamento() {
     }
   };
 
-  useEffect(() => {
-    const fetchAgendamentos = async () => {
-      try {
-        console.log('📅 Buscando agendamentos em: http://localhost:8000/api/agendamentos/');
-        setCarregando(true);
-        setErro('');
-        
-        // URL CORRIGIDA - Agora usa /api/agendamentos/
-        const response = await fetch('http://localhost:8000/api/agendamentos/'); // ✅ URL CORRETA
-        
-        console.log('📡 Resposta recebida:', response.status, response.statusText);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Erro na resposta:', errorText);
-          throw new Error(`Erro ${response.status}: ${response.statusText} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        console.log('✅ Agendamentos recebidos:', data);
-        console.log('📊 Total de agendamentos:', data.length);
-        
-        setAgendamentos(data);
-      } catch (error) {
-        console.error('❌ Erro ao buscar agendamentos:', error);
-        setErro(`Erro ao buscar agendamentos: ${error.message}`);
-      } finally {
-        setCarregando(false);
-      }
-    };
-
-    fetchAgendamentos();
-  }, []);
-
-  const filtrarAgendamentos = () => {
-    if (filtro === 'todos') return agendamentos;
-    
-    const hoje = new Date();
-    const inicioSemana = new Date(hoje);
-    inicioSemana.setDate(hoje.getDate() - hoje.getDay());
-    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    
-    return agendamentos.filter(agendamento => {
-      const dataAgendamento = new Date(agendamento.data_hora);
+  // Função para buscar agendamentos com paginação
+  const fetchAgendamentos = async (pagina = 1, filtroAtual = filtro) => {
+    try {
+      console.log(`📅 Buscando agendamentos - Página ${pagina}, Filtro: ${filtroAtual}`);
+      setCarregandoPagina(true);
+      setErro('');
       
-      switch (filtro) {
-        case 'hoje':
-          return dataAgendamento.toDateString() === hoje.toDateString();
-        case 'semana':
-          return dataAgendamento >= inicioSemana;
-        case 'mes':
-          return dataAgendamento >= inicioMes;
-        default:
-          return agendamento.tipo_sessao === filtro;
+      const skip = (pagina - 1) * limitePorPagina;
+      let url = `/api/agendamentos/?limit=${limitePorPagina}&skip=${skip}`;
+      
+      // Adicionar filtro à URL se não for 'todos'
+      if (filtroAtual !== 'todos') {
+        url += `&filtro=${filtroAtual}`;
       }
-    });
+      
+      const response = await fetchApi(url);
+      
+      console.log('📡 Resposta recebida:', response.status, response.statusText);
+      
+      if (!response) {
+        const errorText = await response.text();
+        console.error('❌ Erro na resposta:', errorText);
+        throw new Error(`Erro ${response.status}: ${response.statusText} - ${errorText}`);
+      }
+      
+      const data = response;
+      console.log('✅ Agendamentos recebidos:', data);
+      
+      // Esperando uma resposta com formato: { agendamentos: [], total: number }
+      if (data.agendamentos && typeof data.total === 'number') {
+        setAgendamentos(data.agendamentos);
+        setTotalAgendamentos(data.total);
+      } else {
+        // Fallback para resposta simples (array)
+        setAgendamentos(data);
+        setTotalAgendamentos(data.length);
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro ao buscar agendamentos:', error);
+      setErro(`Erro ao buscar agendamentos: ${error.message}`);
+    } finally {
+      setCarregando(false);
+      setCarregandoPagina(false);
+    }
   };
 
-  const agendamentosFiltrados = filtrarAgendamentos();
+  // Carregar agendamentos na inicialização
+  useEffect(() => {
+    setCarregando(true);
+    fetchAgendamentos(1, filtro);
+  }, []);
+
+  // Recarregar quando filtro mudar
+  useEffect(() => {
+    setPaginaAtual(1);
+    fetchAgendamentos(1, filtro);
+  }, [filtro]);
+
+  // Mudar página
+  const mudarPagina = (novaPagina) => {
+    if (novaPagina >= 1 && novaPagina <= totalPaginas) {
+      setPaginaAtual(novaPagina);
+      fetchAgendamentos(novaPagina, filtro);
+    }
+  };
+
+  // Calcular total de páginas
+  const totalPaginas = Math.ceil(totalAgendamentos / limitePorPagina);
+
+  // Gerar números das páginas para navegação
+  const obterNumerosPaginas = () => {
+    const numeros = [];
+    const maxVisivel = 5;
+    
+    if (totalPaginas <= maxVisivel) {
+      for (let i = 1; i <= totalPaginas; i++) {
+        numeros.push(i);
+      }
+    } else {
+      let inicio = Math.max(1, paginaAtual - 2);
+      let fim = Math.min(totalPaginas, inicio + maxVisivel - 1);
+      
+      if (fim - inicio < maxVisivel - 1) {
+        inicio = Math.max(1, fim - maxVisivel + 1);
+      }
+      
+      for (let i = inicio; i <= fim; i++) {
+        numeros.push(i);
+      }
+    }
+    
+    return numeros;
+  };
 
   if (erro) {
     return (
@@ -149,7 +191,7 @@ function ListaAgendamento() {
             onClick={() => {
               setErro('');
               setCarregando(true);
-              window.location.reload();
+              fetchAgendamentos(1, filtro);
             }} 
             className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white"
           >
@@ -174,7 +216,8 @@ function ListaAgendamento() {
         <select
           value={filtro}
           onChange={(e) => setFiltro(e.target.value)}
-          className="px-4 py-2 rounded-lg bg-slate-900 text-white border-2 border-slate-700 focus:ring-2 focus:ring-green-500 focus:outline-none"
+          disabled={carregandoPagina}
+          className="px-4 py-2 rounded-lg bg-slate-900 text-white border-2 border-slate-700 focus:ring-2 focus:ring-green-500 focus:outline-none disabled:opacity-50"
         >
           {tiposFiltro.map((tipo) => (
             <option key={tipo.value} value={tipo.value}>
@@ -189,17 +232,24 @@ function ListaAgendamento() {
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto border-green-500"></div>
           <p className="mt-3 text-slate-400">Carregando agendamentos...</p>
         </div>
-      ) : agendamentosFiltrados.length > 0 ? (
+      ) : agendamentos.length > 0 ? (
         <>
-          <div className="mb-4 text-slate-400">
+          {/* Informações da paginação */}
+          <div className="mb-4 flex items-center justify-between text-slate-400">
             <p>
-              {filtro === 'todos' ? 'Total' : 'Filtrados'}: 
-              <span className="font-bold text-white ml-1">{agendamentosFiltrados.length}</span> agendamento(s)
+              Mostrando {((paginaAtual - 1) * limitePorPagina) + 1} a {Math.min(paginaAtual * limitePorPagina, totalAgendamentos)} de {totalAgendamentos} agendamento(s)
             </p>
+            {carregandoPagina && (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-500"></div>
+                <span className="text-sm">Carregando...</span>
+              </div>
+            )}
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {agendamentosFiltrados.map((agendamento) => (
+          {/* Grid de agendamentos */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+            {agendamentos.map((agendamento) => (
               <div
                 key={agendamento.id}
                 className="bg-slate-900 rounded-lg p-5 border border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-lg"
@@ -294,6 +344,49 @@ function ListaAgendamento() {
               </div>
             ))}
           </div>
+
+          {/* Paginação */}
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-center gap-2 py-6">
+              {/* Botão página anterior */}
+              <button
+                onClick={() => mudarPagina(paginaAtual - 1)}
+                disabled={paginaAtual === 1 || carregandoPagina}
+                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={16} />
+                Anterior
+              </button>
+
+              {/* Números das páginas */}
+              <div className="flex gap-1">
+                {obterNumerosPaginas().map((numero) => (
+                  <button
+                    key={numero}
+                    onClick={() => mudarPagina(numero)}
+                    disabled={carregandoPagina}
+                    className={`px-3 py-2 rounded-lg text-sm transition-colors disabled:cursor-not-allowed ${
+                      numero === paginaAtual
+                        ? 'bg-green-600 text-white'
+                        : 'bg-slate-700 hover:bg-slate-600 text-white'
+                    }`}
+                  >
+                    {numero}
+                  </button>
+                ))}
+              </div>
+
+              {/* Botão próxima página */}
+              <button
+                onClick={() => mudarPagina(paginaAtual + 1)}
+                disabled={paginaAtual === totalPaginas || carregandoPagina}
+                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Próxima
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <div className="text-center py-10 text-slate-500">
@@ -308,96 +401,101 @@ function ListaAgendamento() {
         </div>
       )}
 
-      {/* Modal de detalhes */}
+      {/* Modal de detalhes - Corrigido para viewport */}
       {agendamentoSelecionado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-slate-800 rounded-lg w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+            {/* Header do modal */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-700">
               <h3 className="text-xl font-bold text-white">Detalhes do Agendamento</h3>
               <button
                 onClick={() => setAgendamentoSelecionado(null)}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-700"
               >
                 <X size={24} />
               </button>
             </div>
             
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-bold text-white text-lg mb-2">{agendamentoSelecionado.titulo}</h4>
-                <span 
-                  className="inline-block px-3 py-1 rounded-full text-sm font-medium text-white"
-                  style={{ backgroundColor: getTipoColor(agendamentoSelecionado.tipo_sessao) }}
-                >
-                  {getTipoLabel(agendamentoSelecionado.tipo_sessao)}
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-slate-900 rounded-lg">
-                  <Calendar size={20} className="text-blue-400" />
-                  <div>
-                    <p className="text-slate-400 text-sm">Data</p>
-                    <p className="text-white font-medium">{formatarData(agendamentoSelecionado.data_hora)}</p>
-                  </div>
+            {/* Conteúdo do modal - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-bold text-white text-lg mb-2">{agendamentoSelecionado.titulo}</h4>
+                  <span 
+                    className="inline-block px-3 py-1 rounded-full text-sm font-medium text-white"
+                    style={{ backgroundColor: getTipoColor(agendamentoSelecionado.tipo_sessao) }}
+                  >
+                    {getTipoLabel(agendamentoSelecionado.tipo_sessao)}
+                  </span>
                 </div>
                 
-                <div className="flex items-center gap-3 p-3 bg-slate-900 rounded-lg">
-                  <Clock size={20} className="text-green-400" />
-                  <div>
-                    <p className="text-slate-400 text-sm">Horário</p>
-                    <p className="text-white font-medium">
-                      {formatarHora(agendamentoSelecionado.data_hora)}
-                      {agendamentoSelecionado.duracao_em_minutos && (
-                        <span className="text-slate-400 ml-1">
-                          ({agendamentoSelecionado.duracao_em_minutos}min)
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                
-                {agendamentoSelecionado.local && (
-                  <div className="flex items-center gap-3 p-3 bg-slate-900 rounded-lg">
-                    <MapPin size={20} className="text-red-400" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-4 bg-slate-900 rounded-lg">
+                    <Calendar size={20} className="text-blue-400" />
                     <div>
-                      <p className="text-slate-400 text-sm">Local</p>
-                      <p className="text-white font-medium">{agendamentoSelecionado.local}</p>
+                      <p className="text-slate-400 text-sm">Data</p>
+                      <p className="text-white font-medium">{formatarData(agendamentoSelecionado.data_hora)}</p>
                     </div>
                   </div>
-                )}
+                  
+                  <div className="flex items-center gap-3 p-4 bg-slate-900 rounded-lg">
+                    <Clock size={20} className="text-green-400" />
+                    <div>
+                      <p className="text-slate-400 text-sm">Horário</p>
+                      <p className="text-white font-medium">
+                        {formatarHora(agendamentoSelecionado.data_hora)}
+                        {agendamentoSelecionado.duracao_em_minutos && (
+                          <span className="text-slate-400 ml-1">
+                            ({agendamentoSelecionado.duracao_em_minutos}min)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {agendamentoSelecionado.local && (
+                    <div className="flex items-center gap-3 p-4 bg-slate-900 rounded-lg md:col-span-2">
+                      <MapPin size={20} className="text-red-400" />
+                      <div>
+                        <p className="text-slate-400 text-sm">Local</p>
+                        <p className="text-white font-medium">{agendamentoSelecionado.local}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {agendamentoSelecionado.participantes && agendamentoSelecionado.participantes.length > 0 && (
+                    <div className="flex items-start gap-3 p-4 bg-slate-900 rounded-lg md:col-span-2">
+                      <Users size={20} className="text-purple-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-slate-400 text-sm mb-2">Participantes ({agendamentoSelecionado.participantes.length})</p>
+                        <div className="space-y-1">
+                          {agendamentoSelecionado.participantes.map((participante, index) => (
+                            <p key={index} className="text-white font-medium text-sm">
+                              • {participante.nome} {participante.email && `(${participante.email})`}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 
-                {agendamentoSelecionado.participantes && agendamentoSelecionado.participantes.length > 0 && (
-                  <div className="flex items-start gap-3 p-3 bg-slate-900 rounded-lg md:col-span-2">
-                    <Users size={20} className="text-purple-400 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-slate-400 text-sm mb-2">Participantes ({agendamentoSelecionado.participantes.length})</p>
-                      <div className="space-y-1">
-                        {agendamentoSelecionado.participantes.map((participante, index) => (
-                          <p key={index} className="text-white font-medium text-sm">
-                            • {participante.nome} ({participante.email})
-                          </p>
-                        ))}
+                {agendamentoSelecionado.observacoes && (
+                  <div className="p-4 bg-slate-900 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <FileText size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-slate-400 text-sm mb-2">Observações</p>
+                        <p className="text-white leading-relaxed">{agendamentoSelecionado.observacoes}</p>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-              
-              {agendamentoSelecionado.observacoes && (
-                <div className="p-3 bg-slate-900 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <FileText size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-slate-400 text-sm mb-2">Observações</p>
-                      <p className="text-white">{agendamentoSelecionado.observacoes}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
             
-            <div className="flex gap-3 mt-6">
+            {/* Footer do modal */}
+            <div className="flex gap-3 p-6 border-t border-slate-700">
               <button
                 onClick={() => setAgendamentoSelecionado(null)}
                 className="flex-1 py-2 px-4 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors"

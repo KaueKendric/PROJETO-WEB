@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, MapPin, Users, Plus, X, Check, Search, AlertCircle, Save, Tag } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Plus, X, Check, Search, AlertCircle, Save } from 'lucide-react';
+import fetchApi from '../../utils/fetchApi';
 
 function CriarAgendamento() {
   const [agendamento, setAgendamento] = useState({
@@ -34,11 +35,13 @@ function CriarAgendamento() {
   useEffect(() => {
     const fetchCadastros = async () => {
       try {
-        const response = await fetch('http://localhost:8000/cadastros/'); // URL CORRIGIDA
-        if (!response.ok) {
+        const response = await fetchApi('/api/cadastros'); // URL CORRIGIDA
+        console.log("Cadastro",response)
+        if (!response) {
+          
           throw new Error('Erro ao buscar cadastros');
         }
-        const data = await response.json();
+        const data = response;
         setCadastros(data);
       } catch (error) {
         console.error('Erro ao buscar cadastros:', error);
@@ -67,7 +70,7 @@ function CriarAgendamento() {
   const cadastrosFiltrados = cadastros.filter(cadastro =>
     !agendamento.participantes.some(p => p.id === cadastro.id) &&
     (cadastro.nome.toLowerCase().includes(buscaParticipante.toLowerCase()) ||
-     cadastro.email.toLowerCase().includes(buscaParticipante.toLowerCase()))
+      cadastro.email.toLowerCase().includes(buscaParticipante.toLowerCase()))
   );
 
   const handleInputChange = (campo, valor) => {
@@ -138,25 +141,25 @@ function CriarAgendamento() {
       console.log('📤 Enviando agendamento:', dadosAgendamento);
       console.log('🔍 Data/Hora combinada:', dataHora);
 
-      const response = await fetch('http://localhost:8000/api/agendamentos/', { // URL CORRIGIDA
+      const response = await fetchApi('/api/agendamentos/', { // URL CORRIGIDA
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(dadosAgendamento)
       });
+      console.log("agendamentos", response)
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('❌ Erro do servidor:', errorData);
-        throw new Error(errorData.detail || errorData.message || 'Erro ao salvar agendamento');
+      if (!response) {
+        const errorData = response;
+        throw new Error(errorData.detail || 'Erro ao salvar agendamento');
       }
 
-      const resultado = await response.json();
+      const resultado = response;
       console.log('✅ Agendamento criado:', resultado);
 
       setMensagem({ tipo: 'sucesso', texto: 'Agendamento criado com sucesso!' });
-      
+
       // Limpar formulário
       setAgendamento({
         titulo: '',
@@ -170,9 +173,9 @@ function CriarAgendamento() {
 
     } catch (error) {
       console.error('❌ Erro ao salvar agendamento:', error);
-      setMensagem({ 
-        tipo: 'erro', 
-        texto: `Erro ao salvar agendamento: ${error.message}` 
+      setMensagem({
+        tipo: 'erro',
+        texto: `Erro ao salvar agendamento: ${error.message}`
       });
     } finally {
       setCarregandoSalvar(false);
@@ -188,11 +191,10 @@ function CriarAgendamento() {
 
       {/* Mensagens */}
       {mensagem.texto && (
-        <div className={`mb-6 p-4 rounded-2xl border backdrop-blur-sm flex items-center gap-3 ${
-          mensagem.tipo === 'sucesso' 
-            ? 'bg-green-500/20 border-green-400/30 text-green-300' 
-            : 'bg-red-500/20 border-red-400/30 text-red-300'
-        }`}>
+        <div className={`mb-6 p-4 rounded-2xl border backdrop-blur-sm flex items-center gap-3 ${mensagem.tipo === 'sucesso'
+          ? 'bg-green-500/20 border-green-400/30 text-green-300'
+          : 'bg-red-500/20 border-red-400/30 text-red-300'
+          }`}>
           {mensagem.tipo === 'sucesso' ? (
             <Check size={20} />
           ) : (
@@ -256,7 +258,7 @@ function CriarAgendamento() {
               className="w-full px-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 backdrop-blur-sm"
             />
           </div>
-          
+
           <div>
             <label className="block text-white font-medium mb-2">
               <Clock size={16} className="inline mr-2" />
@@ -292,7 +294,7 @@ function CriarAgendamento() {
             <Users size={16} className="inline mr-2" />
             Participantes
           </label>
-          
+
           {/* Busca de participantes */}
           <div className="relative" ref={listaParticipantesRef}>
             <div className="relative">
@@ -415,7 +417,7 @@ function CriarAgendamento() {
           >
             Limpar
           </button>
-          
+
           <button
             onClick={salvarAgendamento}
             disabled={carregandoSalvar}
