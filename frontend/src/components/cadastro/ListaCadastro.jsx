@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, Mail, Phone, AlertCircle, Eye, X, Filter, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import fetchApi from '../../utils/fetchApi';
 
 function ListaCadastro() {
   const [cadastros, setCadastros] = useState([]);
@@ -7,7 +8,7 @@ function ListaCadastro() {
   const [erro, setErro] = useState('');
   const [cadastroSelecionado, setCadastroSelecionado] = useState(null);
   const [filtro, setFiltro] = useState('');
-  
+
   // Estados para paginação
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totalCadastros, setTotalCadastros] = useState(0);
@@ -17,13 +18,13 @@ function ListaCadastro() {
   // Função para formatar data no formato brasileiro
   const formatarData = (data) => {
     if (!data) return '';
-    
+
     // Se já está no formato ISO (YYYY-MM-DD)
     if (data.includes('-')) {
       const [ano, mes, dia] = data.split('-');
       return `${dia}/${mes}/${ano}`;
     }
-    
+
     // Se está no formato brasileiro (DD/MM/YYYY)
     return data;
   };
@@ -34,28 +35,30 @@ function ListaCadastro() {
       console.log(`👥 Buscando cadastros - Página ${pagina}, Filtro: "${filtroAtual}"`);
       setCarregandoPagina(true);
       setErro('');
-      
+
       const skip = (pagina - 1) * limitePorPagina;
-      let url = `http://localhost:8000/cadastros/?limit=${limitePorPagina}&skip=${skip}`;
-      
+
+      let url = `/api/cadastros/?limit=${limitePorPagina}&skip=${skip}`;
+
       // Adicionar filtro à URL se não estiver vazio
       if (filtroAtual.trim()) {
         url += `&filtro=${encodeURIComponent(filtroAtual.trim())}`;
       }
-      
-      const response = await fetch(url);
-      
+
+
+      const response = await fetchApi(url);
+
       console.log('📡 Resposta recebida:', response.status, response.statusText);
-      
-      if (!response.ok) {
+
+      if (!response) {
         const errorText = await response.text();
         console.error('❌ Erro na resposta:', errorText);
         throw new Error(`Erro ${response.status}: ${response.statusText}`);
       }
-      
-      const data = await response.json();
+
+      const data = response;
       console.log('✅ Cadastros recebidos:', data);
-      
+
       // Verificar se a resposta tem o formato esperado
       if (data.cadastros && typeof data.total === 'number') {
         setCadastros(data.cadastros);
@@ -65,7 +68,7 @@ function ListaCadastro() {
         setCadastros(Array.isArray(data) ? data : []);
         setTotalCadastros(Array.isArray(data) ? data.length : 0);
       }
-      
+
     } catch (error) {
       console.error('❌ Erro ao buscar cadastros:', error);
       setErro('Erro ao buscar cadastros: ' + error.message);
@@ -106,7 +109,7 @@ function ListaCadastro() {
   const obterNumerosPaginas = () => {
     const numeros = [];
     const maxVisivel = 5;
-    
+
     if (totalPaginas <= maxVisivel) {
       for (let i = 1; i <= totalPaginas; i++) {
         numeros.push(i);
@@ -114,16 +117,16 @@ function ListaCadastro() {
     } else {
       let inicio = Math.max(1, paginaAtual - 2);
       let fim = Math.min(totalPaginas, inicio + maxVisivel - 1);
-      
+
       if (fim - inicio < maxVisivel - 1) {
         inicio = Math.max(1, fim - maxVisivel + 1);
       }
-      
+
       for (let i = inicio; i <= fim; i++) {
         numeros.push(i);
       }
     }
-    
+
     return numeros;
   };
 
@@ -137,12 +140,12 @@ function ListaCadastro() {
         <div className="text-center p-8 bg-red-500/20 rounded-2xl border border-red-400/30 backdrop-blur-sm">
           <AlertCircle className="mx-auto mb-4 text-red-300" size={48} />
           <p className="text-lg text-red-300 font-medium">{erro}</p>
-          <button 
+          <button
             onClick={() => {
               setErro('');
               setCarregando(true);
               fetchCadastros(1, filtro);
-            }} 
+            }}
             className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white"
           >
             Tentar Novamente
@@ -159,7 +162,7 @@ function ListaCadastro() {
           <Users className="text-purple-400" size={28} />
           Lista de Cadastros
         </h2>
-        
+
         {/* Filtro de busca */}
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -175,7 +178,7 @@ function ListaCadastro() {
           </div>
         </div>
       </div>
-      
+
       {carregando ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-2 border-purple-400/30 border-t-purple-400 mx-auto mb-4"></div>
@@ -204,7 +207,7 @@ function ListaCadastro() {
               </button>
             )}
           </div>
-          
+
           {/* Grid de cadastros */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
             {cadastros.map((cadastro) => (
@@ -220,7 +223,7 @@ function ListaCadastro() {
                     ID: {cadastro.id}
                   </span>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 text-white/80">
                     <Mail size={16} className="text-purple-400 flex-shrink-0" />
@@ -228,23 +231,23 @@ function ListaCadastro() {
                       {cadastro.email}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center gap-3 text-white/80">
                     <Phone size={16} className="text-green-400 flex-shrink-0" />
                     <span className="text-sm">
                       {cadastro.telefone}
                     </span>
                   </div>
-                  
+
                   {cadastro.data_nascimento && (
                     <div className="text-white/60 text-sm">
                       <span className="font-medium">Nascimento:</span> {formatarData(cadastro.data_nascimento)}
                     </div>
                   )}
-                  
+
                   {cadastro.endereco && (
                     <div className="text-white/60 text-sm">
-                      <span className="font-medium">Endereço:</span> 
+                      <span className="font-medium">Endereço:</span>
                       <span className="block truncate" title={cadastro.endereco}>
                         {cadastro.endereco}
                       </span>
@@ -286,11 +289,10 @@ function ListaCadastro() {
                     key={numero}
                     onClick={() => mudarPagina(numero)}
                     disabled={carregandoPagina}
-                    className={`px-3 py-2 rounded-lg text-sm transition-colors disabled:cursor-not-allowed border ${
-                      numero === paginaAtual
-                        ? 'bg-purple-600 text-white border-purple-500'
-                        : 'bg-white/5 hover:bg-white/10 text-white border-white/10 hover:border-purple-400/50'
-                    }`}
+                    className={`px-3 py-2 rounded-lg text-sm transition-colors disabled:cursor-not-allowed border ${numero === paginaAtual
+                      ? 'bg-purple-600 text-white border-purple-500'
+                      : 'bg-white/5 hover:bg-white/10 text-white border-white/10 hover:border-purple-400/50'
+                      }`}
                   >
                     {numero}
                   </button>
@@ -314,7 +316,7 @@ function ListaCadastro() {
           <Users size={64} className="mx-auto mb-6 text-white/30" />
           <h3 className="text-xl font-bold text-white mb-2">Nenhum cadastro encontrado</h3>
           <p className="text-white/60">
-            {filtro 
+            {filtro
               ? `Nenhum resultado encontrado para "${filtro}". Tente alterar o filtro ou criar novos cadastros.`
               : 'Comece criando o primeiro cadastro na aba "Novo Cadastro".'
             }
@@ -344,7 +346,7 @@ function ListaCadastro() {
                 <X size={24} />
               </button>
             </div>
-            
+
             {/* Conteúdo do modal - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
               <div className="space-y-6">
@@ -354,7 +356,7 @@ function ListaCadastro() {
                     ID: {cadastroSelecionado.id}
                   </span>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
                     <div className="flex items-center gap-3 mb-2">
@@ -363,7 +365,7 @@ function ListaCadastro() {
                     </div>
                     <p className="text-white font-medium break-all">{cadastroSelecionado.email}</p>
                   </div>
-                  
+
                   <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
                     <div className="flex items-center gap-3 mb-2">
                       <Phone size={20} className="text-green-400" />
@@ -371,7 +373,7 @@ function ListaCadastro() {
                     </div>
                     <p className="text-white font-medium">{cadastroSelecionado.telefone}</p>
                   </div>
-                  
+
                   {cadastroSelecionado.data_nascimento && (
                     <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
                       <div className="flex items-center gap-3 mb-2">
@@ -381,7 +383,7 @@ function ListaCadastro() {
                       <p className="text-white font-medium">{formatarData(cadastroSelecionado.data_nascimento)}</p>
                     </div>
                   )}
-                  
+
                   {cadastroSelecionado.data_criacao && (
                     <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
                       <div className="flex items-center gap-3 mb-2">
@@ -393,7 +395,7 @@ function ListaCadastro() {
                       </p>
                     </div>
                   )}
-                  
+
                   {cadastroSelecionado.endereco && (
                     <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 md:col-span-2">
                       <div className="flex items-center gap-3 mb-2">
@@ -406,7 +408,7 @@ function ListaCadastro() {
                 </div>
               </div>
             </div>
-            
+
             {/* Footer do modal */}
             <div className="flex gap-3 p-6 border-t border-slate-700">
               <button

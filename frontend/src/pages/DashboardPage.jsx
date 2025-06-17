@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Calendar, UserPlus, LogOut, BarChart3, Settings, Bell, Search, Menu, User, Clock, ChevronRight, Activity, TrendingUp, Users, Zap } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import fetchApi from '../utils/fetchApi';
 
 function DashboardPage({ onLogout }) {
     const navigate = useNavigate();
@@ -38,11 +39,9 @@ function DashboardPage({ onLogout }) {
     useEffect(() => {
         const fetchDadosDashboard = async () => {
             try {
-                const summaryRes = await fetch(`${API_URL}/api/dashboard/summary`);
-                const atividadeRes = await fetch(`${API_URL}/api/dashboard/atividade`);
-
-                const summary = await summaryRes.json();
-                const atividade = await atividadeRes.json();
+                const summary = await fetchApi(`/api/dashboard/summary`);
+                const atividade = await fetchApi(`/api/dashboard/atividade`);
+                console.log(summary)
 
                 setSistemas([
                     {

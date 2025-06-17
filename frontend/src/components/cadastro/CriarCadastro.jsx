@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { UserPlus, User, Mail, Phone, Calendar, MapPin, Check, X } from 'lucide-react';
+import fetchApi from '../../utils/fetchApi';
 
 function CriarCadastro() {
   const [formData, setFormData] = useState({
@@ -12,7 +13,6 @@ function CriarCadastro() {
   const [mensagem, setMensagem] = useState('');
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
-  const API_URL = import.meta.env.VITE_API_URL;
 
   const formatarTelefone = (valor) => {
     const apenasNumeros = valor.replace(/\D/g, '');
@@ -46,22 +46,22 @@ function CriarCadastro() {
     setMensagem('');
     setErro('');
     setCarregando(true);
-    
-    
+
+
 
     try {
-      const response = await fetch(`${API_URL}/cadastros/`, {
+      const response = await fetchApi(`/api/cadastros/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
+
+      if (!response) {
+        const errorData = response;
         throw new Error(errorData.detail || 'Erro ao criar cadastro');
       }
-      
-      const data = await response.json();
+
+      const data = response;
       setMensagem(`Cadastro criado com sucesso! ID: ${data.id}`);
       setFormData({ nome: '', email: '', telefone: '', data_nascimento: '', endereco: '' });
     } catch (error) {
@@ -76,14 +76,14 @@ function CriarCadastro() {
       <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
         <UserPlus className="text-blue-400" /> Criar Novo Cadastro
       </h2>
-      
+
       {mensagem && (
         <div className="mb-6 p-4 rounded-xl flex items-center gap-3 bg-green-100 border border-green-300 text-green-800">
           <Check />
           <span>{mensagem}</span>
         </div>
       )}
-      
+
       {erro && (
         <div className="mb-6 p-4 rounded-xl flex items-center gap-3 bg-red-100 border border-red-300 text-red-800">
           <X />
@@ -108,7 +108,7 @@ function CriarCadastro() {
               placeholder="Digite o nome completo"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-semibold mb-2 text-slate-300">
               <Mail size={16} className="inline mr-2" />
@@ -124,7 +124,7 @@ function CriarCadastro() {
               placeholder="exemplo@email.com"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-semibold mb-2 text-slate-300">
               <Phone size={16} className="inline mr-2" />
@@ -141,7 +141,7 @@ function CriarCadastro() {
               maxLength="15"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-semibold mb-2 text-slate-300">
               <Calendar size={16} className="inline mr-2" />
@@ -159,7 +159,7 @@ function CriarCadastro() {
             />
           </div>
         </div>
-        
+
         <div>
           <label className="block text-sm font-semibold mb-2 text-slate-300">
             <MapPin size={16} className="inline mr-2" />
@@ -174,7 +174,7 @@ function CriarCadastro() {
             placeholder="Endereço completo"
           />
         </div>
-        
+
         <div className="flex justify-end">
           <button
             type="submit"

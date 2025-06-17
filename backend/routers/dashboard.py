@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from backend.database.database import get_db
 from backend.database import models
 
-router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
+router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 # ✅ Resumo geral
 @router.get("/summary")

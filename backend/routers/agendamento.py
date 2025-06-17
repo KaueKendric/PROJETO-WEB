@@ -4,6 +4,7 @@ from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, and_, or_
+from backend.utils.email import enviar_email_background
 
 from backend.database.database import get_db
 from backend.database import models
@@ -187,9 +188,7 @@ def aplicar_filtros_agendamento(query, count_query, filtro: str):
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCreate, db: Session = Depends(get_db)):
-    """
-    Criar um novo agendamento - Mantendo sua lógica existente
-    """
+    
     try:
         print(f"📝 Dados recebidos para criação: {agendamento_data.dict()}")
         

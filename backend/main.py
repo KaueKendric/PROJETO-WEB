@@ -34,10 +34,10 @@ app.add_middleware(
 
 # ✅ Inclusão dos routers (organizado e sem duplicação)
 app.include_router(agendamento.router, prefix="/api")  # Para usar /api/agendamentos/
-app.include_router(cadastro.router)
-app.include_router(funcionario.router)
-app.include_router(login.router)
-app.include_router(dashboard.router)
+app.include_router(cadastro.router, prefix="/api")
+app.include_router(funcionario.router, prefix="/api")
+app.include_router(login.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
 
 # ✅ Rota principal
 @app.get("/")
@@ -48,10 +48,10 @@ async def root():
         "status": "online",
         "endpoints": {
             "agendamentos": "/api/agendamentos/",
-            "cadastros": "/cadastros/",
-            "funcionarios": "/funcionarios/",
-            "login": "/auth/login",
-            "dashboard": "/dashboard/",
+            "cadastros": "/api/cadastros/",
+            "funcionarios": "/api/funcionarios/",
+            "login": "/api/auth/login",
+            "dashboard": "/api/dashboard/",
             "docs": "/docs"
         }
     }
@@ -70,23 +70,6 @@ async def health_check():
 async def login_sem_auth(login_data: login.LoginRequest):
     return await login.login(login_data)
 
-# ✅ Listagem de cadastros (mantido para compatibilidade)
-@app.get("/cadastros/")
-async def listar_cadastros(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    try:
-        return db.query(models.Cadastro).offset(skip).limit(limit).all()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/cadastros/{cadastro_id}")
-async def obter_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
-    try:
-        cadastro = db.query(models.Cadastro).filter(models.Cadastro.id == cadastro_id).first()
-        if not cadastro:
-            raise HTTPException(status_code=404, detail="Cadastro não encontrado")
-        return cadastro
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 # ✅ Listagem de funcionários (mantido para compatibilidade)
 @app.get("/funcionarios/")

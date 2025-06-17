@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Activity, TrendingUp, Users, Calendar, UserPlus } from 'lucide-react';
+import fetchApi from '../../utils/fetchApi';
 
 function DashboardPage() {
     const [summary, setSummary] = useState({ cadastros: 0, agendamentos: 0 });
     const [atividade, setAtividade] = useState({ hoje: 0, semana: 0, ativos_mes: 0 });
 
     useEffect(() => {
-        fetch("http://localhost:8000/api/dashboard/summary")
-            .then(res => res.json())
+        fetchApi("/api/dashboard/summary")
+            .then(res => res)
             .then(data => setSummary(data));
 
-        fetch("http://localhost:8000/api/dashboard/atividade")
-            .then(res => res.json())
+        fetchApi("/api/dashboard/atividade")
+            .then(res => res)
             .then(data => setAtividade(data));
     }, []);
 

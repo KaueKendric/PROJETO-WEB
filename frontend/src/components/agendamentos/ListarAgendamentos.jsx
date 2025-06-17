@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Users, FileText, AlertCircle, Edit2, Trash2, Eye, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import fetchApi from '../../utils/fetchApi';
 
 function ListaAgendamento() {
   const [agendamentos, setAgendamentos] = useState([]);
@@ -88,24 +89,24 @@ function ListaAgendamento() {
       setErro('');
       
       const skip = (pagina - 1) * limitePorPagina;
-      let url = `http://localhost:8000/api/agendamentos/?limit=${limitePorPagina}&skip=${skip}`;
+      let url = `/api/agendamentos/?limit=${limitePorPagina}&skip=${skip}`;
       
       // Adicionar filtro à URL se não for 'todos'
       if (filtroAtual !== 'todos') {
         url += `&filtro=${filtroAtual}`;
       }
       
-      const response = await fetch(url);
+      const response = await fetchApi(url);
       
       console.log('📡 Resposta recebida:', response.status, response.statusText);
       
-      if (!response.ok) {
+      if (!response) {
         const errorText = await response.text();
         console.error('❌ Erro na resposta:', errorText);
         throw new Error(`Erro ${response.status}: ${response.statusText} - ${errorText}`);
       }
       
-      const data = await response.json();
+      const data = response;
       console.log('✅ Agendamentos recebidos:', data);
       
       // Esperando uma resposta com formato: { agendamentos: [], total: number }

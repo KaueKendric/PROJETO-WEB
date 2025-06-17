@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, AlertCircle, Calendar, Clock, MapPin, Users, FileText, Filter, X } from 'lucide-react';
+import fetchApi from '../../utils/fetchApi';
 
 function BuscarAgendamento() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,7 +47,7 @@ function BuscarAgendamento() {
     try {
       const data = new Date(dataHora);
       return data.toLocaleDateString('pt-BR');
-    // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       return 'Data inválida';
     }
@@ -56,7 +57,7 @@ function BuscarAgendamento() {
     try {
       const data = new Date(dataHora);
       return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       return 'Hora inválida';
     }
@@ -66,7 +67,7 @@ function BuscarAgendamento() {
     if (!participantes || participantes.length === 0) {
       return 'Nenhum participante';
     }
-    
+
     if (participantes.length === 1) {
       return participantes[0].nome;
     } else if (participantes.length <= 3) {
@@ -94,25 +95,25 @@ function BuscarAgendamento() {
       if (isNumeric && searchTerm.trim()) {
         // Busca por ID específico
         console.log(`🔍 Buscando agendamento por ID: ${searchTerm.trim()}`);
-        const response = await fetch(`http://localhost:8000/api/agendamentos/${searchTerm.trim()}`);
-        
+        const response = await fetchApi(`/api/agendamentos/${searchTerm.trim()}`);
+
         if (response.status === 404) {
           throw new Error('Agendamento não encontrado com este ID.');
         }
-        if (!response.ok) {
+        if (!response) {
           const errorText = await response.text();
           throw new Error(`Erro ao buscar agendamento por ID: ${response.status} - ${errorText}`);
         }
-        
-        const agendamento = await response.json();
+
+        const agendamento = response;
         data = [agendamento];
       } else {
         // Busca geral usando a API paginada com LIMITE MÁXIMO DE 50
         console.log(`🔍 Buscando agendamentos com filtros`);
-        
+
         // Construir URL da API paginada
         let filtroAPI = '';
-        
+
         // Determinar filtro baseado nos critérios
         if (filtroTipo) {
           filtroAPI = filtroTipo;
@@ -122,22 +123,22 @@ function BuscarAgendamento() {
         } else {
           filtroAPI = 'todos';
         }
-        
+
         // IMPORTANTE: Usando limit=50 (máximo permitido pela API)
-        const url = `http://localhost:8000/api/agendamentos/?limit=50&skip=0&filtro=${filtroAPI}`;
+        const url = `/api/agendamentos/?limit=50&skip=0&filtro=${filtroAPI}`;
         console.log(`📡 Fazendo requisição para: ${url}`);
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
+
+        const response = await fetchApi(url);
+
+        if (!response) {
           const errorText = await response.text();
           console.error('❌ Erro na resposta:', errorText);
           throw new Error(`Erro ao buscar agendamentos: ${response.status} - ${errorText}`);
         }
-        
-        const responseData = await response.json();
+
+        const responseData = response;
         console.log('📡 Resposta da API:', responseData);
-        
+
         // Verificar formato da resposta
         let agendamentos;
         if (responseData.agendamentos && Array.isArray(responseData.agendamentos)) {
@@ -149,24 +150,24 @@ function BuscarAgendamento() {
         } else {
           throw new Error('Formato de resposta inesperado da API');
         }
-        
+
         // Aplicar filtros adicionais no frontend
         data = agendamentos.filter(agendamento => {
           // Filtro por texto (título, observações, local, participantes)
-          const matchTexto = !searchTerm.trim() || 
+          const matchTexto = !searchTerm.trim() ||
             agendamento.titulo.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
             (agendamento.observacoes && agendamento.observacoes.toLowerCase().includes(searchTerm.trim().toLowerCase())) ||
             (agendamento.local && agendamento.local.toLowerCase().includes(searchTerm.trim().toLowerCase())) ||
-            (agendamento.participantes && 
-             agendamento.participantes.some(p => 
-               p.nome.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
-               p.email.toLowerCase().includes(searchTerm.trim().toLowerCase())
-             ));
+            (agendamento.participantes &&
+              agendamento.participantes.some(p =>
+                p.nome.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+                p.email.toLowerCase().includes(searchTerm.trim().toLowerCase())
+              ));
 
           // Filtro por data específica
-          const matchData = !filtroData || 
-            (agendamento.data_hora && 
-             new Date(agendamento.data_hora).toISOString().split('T')[0] === filtroData);
+          const matchData = !filtroData ||
+            (agendamento.data_hora &&
+              new Date(agendamento.data_hora).toISOString().split('T')[0] === filtroData);
 
           // Filtro por tipo (já aplicado na API, mas vamos manter para consistência)
           const matchTipo = !filtroTipo || agendamento.tipo_sessao === filtroTipo;
@@ -234,20 +235,19 @@ function BuscarAgendamento() {
               className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm hover:bg-white/10"
             />
           </div>
-          
+
           <div className="flex gap-3">
             <button
               onClick={() => setFiltrosAtivos(!filtrosAtivos)}
-              className={`py-4 px-6 rounded-2xl font-medium text-white transition-all duration-300 flex items-center gap-2 border ${
-                filtrosAtivos 
-                  ? 'bg-green-600/20 border-green-400/50 text-green-300' 
-                  : 'bg-white/10 border-white/20 hover:bg-white/20'
-              }`}
+              className={`py-4 px-6 rounded-2xl font-medium text-white transition-all duration-300 flex items-center gap-2 border ${filtrosAtivos
+                ? 'bg-green-600/20 border-green-400/50 text-green-300'
+                : 'bg-white/10 border-white/20 hover:bg-white/20'
+                }`}
             >
               <Filter size={20} />
               Filtros
             </button>
-            
+
             <button
               onClick={buscarAgendamentos}
               disabled={carregando}
@@ -255,7 +255,7 @@ function BuscarAgendamento() {
             >
               {/* Brilho animado */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              
+
               <div className="relative flex items-center gap-3">
                 {carregando ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
@@ -267,7 +267,7 @@ function BuscarAgendamento() {
             </button>
           </div>
         </div>
-        
+
         <p className="text-white/50 text-sm mt-3 ml-1">
           💡 Dica: Digite um número para buscar por ID ou texto para busca geral (máximo 50 resultados)
         </p>
@@ -280,7 +280,7 @@ function BuscarAgendamento() {
             <Filter size={18} className="text-green-400" />
             Filtros Avançados
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-semibold mb-3 text-white/90 flex items-center gap-2">
@@ -294,7 +294,7 @@ function BuscarAgendamento() {
                 className="w-full p-4 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 backdrop-blur-sm hover:bg-white/10"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-semibold mb-3 text-white/90 flex items-center gap-2">
                 <FileText size={16} className="text-green-400" />
@@ -313,7 +313,7 @@ function BuscarAgendamento() {
               </select>
             </div>
           </div>
-          
+
           <div className="flex gap-3 mt-6">
             <button
               onClick={limparBusca}
@@ -350,17 +350,17 @@ function BuscarAgendamento() {
               </span>
             </div>
           </div>
-          
+
           <div className="mb-4">
             <h4 className="font-bold text-white text-2xl mb-3">{agendamentoSelecionado.titulo}</h4>
             <div className="flex items-center gap-2">
-              <div 
-                className="w-3 h-3 rounded-full" 
+              <div
+                className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: getTipoColor(agendamentoSelecionado.tipo_sessao) }}
               ></div>
-              <span 
+              <span
                 className="px-3 py-1 rounded-full text-sm font-medium text-white border"
-                style={{ 
+                style={{
                   backgroundColor: getTipoColor(agendamentoSelecionado.tipo_sessao) + '20',
                   borderColor: getTipoColor(agendamentoSelecionado.tipo_sessao) + '30'
                 }}
@@ -369,7 +369,7 @@ function BuscarAgendamento() {
               </span>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white/5 rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-3 mb-2">
@@ -378,7 +378,7 @@ function BuscarAgendamento() {
               </div>
               <p className="text-white font-semibold text-lg">{formatarData(agendamentoSelecionado.data_hora)}</p>
             </div>
-            
+
             <div className="bg-white/5 rounded-xl p-4 border border-white/10">
               <div className="flex items-center gap-3 mb-2">
                 <Clock size={20} className="text-green-400" />
@@ -393,7 +393,7 @@ function BuscarAgendamento() {
                 )}
               </p>
             </div>
-            
+
             {agendamentoSelecionado.local && (
               <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                 <div className="flex items-center gap-3 mb-2">
@@ -403,7 +403,7 @@ function BuscarAgendamento() {
                 <p className="text-white font-medium">{agendamentoSelecionado.local}</p>
               </div>
             )}
-            
+
             {agendamentoSelecionado.participantes && agendamentoSelecionado.participantes.length > 0 && (
               <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                 <div className="flex items-center gap-3 mb-2">
@@ -425,7 +425,7 @@ function BuscarAgendamento() {
               </div>
             )}
           </div>
-          
+
           {agendamentoSelecionado.observacoes && (
             <div className="mt-6 bg-white/5 rounded-xl p-4 border border-white/10">
               <div className="flex items-start gap-3">
@@ -462,16 +462,16 @@ function BuscarAgendamento() {
                     ID: {resultado.id}
                   </span>
                 </div>
-                
+
                 <div className="mb-3">
                   <div className="flex items-center gap-2">
-                    <div 
-                      className="w-2 h-2 rounded-full" 
+                    <div
+                      className="w-2 h-2 rounded-full"
                       style={{ backgroundColor: getTipoColor(resultado.tipo_sessao) }}
                     ></div>
-                    <span 
+                    <span
                       className="px-2 py-1 rounded-full text-xs font-medium text-white border"
-                      style={{ 
+                      style={{
                         backgroundColor: getTipoColor(resultado.tipo_sessao) + '20',
                         borderColor: getTipoColor(resultado.tipo_sessao) + '30'
                       }}
@@ -480,7 +480,7 @@ function BuscarAgendamento() {
                     </span>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-white/70">
                     <Calendar size={14} className="text-blue-400" />
@@ -503,7 +503,7 @@ function BuscarAgendamento() {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="mt-4 pt-3 border-t border-white/10">
                   <p className="text-green-400 text-xs font-medium group-hover:text-green-300 transition-colors">
                     Clique para ver detalhes completos
@@ -521,7 +521,7 @@ function BuscarAgendamento() {
           <Search size={64} className="mx-auto mb-6 text-white/20" />
           <h3 className="text-2xl font-bold text-white mb-3">Busque por um agendamento específico</h3>
           <p className="text-white/60 max-w-md mx-auto mb-6">
-            Use o campo acima para pesquisar por ID, título, local ou participantes. 
+            Use o campo acima para pesquisar por ID, título, local ou participantes.
             Os resultados aparecerão aqui de forma organizada.
           </p>
           <div className="mb-6 space-y-2 text-white/50 text-sm">
