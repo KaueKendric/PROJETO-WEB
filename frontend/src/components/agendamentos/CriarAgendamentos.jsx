@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, MapPin, Users, Plus, X, Check, Search, AlertCircle, Save } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Plus, X, Check, Search, AlertCircle, Save, Tag } from 'lucide-react';
 
 function CriarAgendamento() {
   const [agendamento, setAgendamento] = useState({
@@ -8,7 +8,8 @@ function CriarAgendamento() {
     hora: '',
     local: '',
     descricao: '',
-    participantes: []
+    participantes: [],
+    tipo: 'reuniao' // Valor padrão
   });
 
   const [cadastros, setCadastros] = useState([]);
@@ -20,6 +21,14 @@ function CriarAgendamento() {
 
   const inputParticipanteRef = useRef(null);
   const listaParticipantesRef = useRef(null);
+
+  // Opções de tipo de agendamento
+  const tiposAgendamento = [
+    { value: 'reuniao', label: 'Reunião', icon: '👥' },
+    { value: 'consulta', label: 'Consulta', icon: '🩺' },
+    { value: 'evento', label: 'Evento', icon: '🎉' },
+    { value: 'outros', label: 'Outros', icon: '📋' }
+  ];
 
   // Buscar cadastros do backend - URL CORRIGIDA
   useEffect(() => {
@@ -97,6 +106,10 @@ function CriarAgendamento() {
       setMensagem({ tipo: 'erro', texto: 'A hora é obrigatória' });
       return false;
     }
+    if (!agendamento.tipo) {
+      setMensagem({ tipo: 'erro', texto: 'O tipo de agendamento é obrigatório' });
+      return false;
+    }
     return true;
   };
 
@@ -107,18 +120,23 @@ function CriarAgendamento() {
     setMensagem({ tipo: '', texto: '' });
 
     try {
+      // Combinar data e hora em um único DateTime
+      const dataHora = `${agendamento.data}T${agendamento.hora}:00`;
+      
       const dadosAgendamento = {
         titulo: agendamento.titulo,
-        data: agendamento.data,
-        hora: agendamento.hora,
-        local: agendamento.local,
-        descricao: agendamento.descricao,
+        data_hora: dataHora, // Campo correto do modelo
+        usuario_id: 1, // TEMPORÁRIO - você precisa definir qual usuário está criando
+        local: agendamento.local || null,
+        observacoes: agendamento.descricao || null, // Campo correto do modelo
         participantes_ids: agendamento.participantes.map(p => p.id),
-        tipo_sessao: 'reuniao',
-        duracao_em_minutos: 60
+        tipo_sessao: agendamento.tipo,
+        duracao_em_minutos: 60,
+        status: "agendado" // Status padrão
       };
 
       console.log('📤 Enviando agendamento:', dadosAgendamento);
+      console.log('🔍 Data/Hora combinada:', dataHora);
 
       const response = await fetch('http://localhost:8000/api/agendamentos/', { // URL CORRIGIDA
         method: 'POST',
@@ -129,8 +147,9 @@ function CriarAgendamento() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Erro ao salvar agendamento');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Erro do servidor:', errorData);
+        throw new Error(errorData.detail || errorData.message || 'Erro ao salvar agendamento');
       }
 
       const resultado = await response.json();
@@ -145,7 +164,8 @@ function CriarAgendamento() {
         hora: '',
         local: '',
         descricao: '',
-        participantes: []
+        participantes: [],
+        tipo: 'reuniao'
       });
 
     } catch (error) {
@@ -195,6 +215,31 @@ function CriarAgendamento() {
             placeholder="Ex: Reunião de equipe, Consulta médica..."
             className="w-full px-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm"
           />
+        </div>
+
+        {/* Tipo de Agendamento */}
+        <div>
+          <label className="block text-white font-medium mb-2">
+            <Tag size={16} className="inline mr-2" />
+            Tipo de Agendamento *
+          </label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {tiposAgendamento.map((tipo) => (
+              <button
+                key={tipo.value}
+                type="button"
+                onClick={() => handleInputChange('tipo', tipo.value)}
+                className={`p-3 rounded-xl border transition-all duration-300 flex flex-col items-center gap-2 ${
+                  agendamento.tipo === tipo.value
+                    ? 'bg-green-500/20 border-green-400/50 text-green-300'
+                    : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20'
+                }`}
+              >
+                <span className="text-2xl">{tipo.icon}</span>
+                <span className="text-sm font-medium">{tipo.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Data e Hora */}
@@ -360,7 +405,8 @@ function CriarAgendamento() {
                 hora: '',
                 local: '',
                 descricao: '',
-                participantes: []
+                participantes: [],
+                tipo: 'reuniao'
               });
               setMensagem({ tipo: '', texto: '' });
             }}

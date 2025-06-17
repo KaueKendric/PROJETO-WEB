@@ -15,7 +15,8 @@ function ListaAgendamento() {
     { value: 'mes', label: 'Este Mês' },
     { value: 'reuniao', label: 'Reuniões' },
     { value: 'consulta', label: 'Consultas' },
-    { value: 'evento', label: 'Eventos' }
+    { value: 'evento', label: 'Eventos' },
+    { value: 'outros', label: 'Outros' }
   ];
 
   const getTipoLabel = (tipo) => {
