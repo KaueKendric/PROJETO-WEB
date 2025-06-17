@@ -8,9 +8,23 @@ function ObterCadastro() {
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
 
+  // Função para formatar data
+  const formatarData = (data) => {
+    if (!data) return '';
+    
+    // Se já está no formato ISO (YYYY-MM-DD)
+    if (data.includes('-')) {
+      const [ano, mes, dia] = data.split('-');
+      return `${dia}/${mes}/${ano}`;
+    }
+    
+    // Se está no formato brasileiro (DD/MM/YYYY)
+    return data;
+  };
+
   const buscarDados = async () => {
     if (!searchTerm.trim()) {
-      setErro('Por favor, insira um nome ou ID para pesquisa.');
+      setErro('Por favor, insira um nome, email ou ID para pesquisa.');
       return;
     }
 
@@ -25,26 +39,52 @@ function ObterCadastro() {
 
       if (isNumeric) {
         // Busca por ID específico
+        console.log(`🔍 Buscando cadastro por ID: ${searchTerm.trim()}`);
         const response = await fetch(`http://localhost:8000/cadastros/${searchTerm.trim()}`);
+        
         if (response.status === 404) {
           throw new Error('Cadastro não encontrado com este ID.');
         }
         if (!response.ok) {
-          throw new Error('Erro ao buscar cadastro por ID.');
+          const errorText = await response.text();
+          throw new Error(`Erro ao buscar cadastro por ID: ${response.status} - ${errorText}`);
         }
-        data = [await response.json()];
+        
+        const cadastro = await response.json();
+        data = [cadastro];
       } else {
-        // Busca por nome
-        const response = await fetch('http://localhost:8000/cadastros/');
-        if (!response.ok) {
-          throw new Error('Erro ao buscar lista de cadastros.');
-        }
-        const todos = await response.json();
-        data = todos.filter(c => 
-          c.nome.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
-          c.email.toLowerCase().includes(searchTerm.trim().toLowerCase())
+        // Busca por nome/email usando a API paginada
+        console.log(`🔍 Buscando cadastros com filtro: "${searchTerm.trim()}"`);
+        
+        // Usar a API paginada com filtro
+        const response = await fetch(
+          `http://localhost:8000/cadastros/?limit=50&skip=0&filtro=${encodeURIComponent(searchTerm.trim())}`
         );
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro ao buscar cadastros: ${response.status} - ${errorText}`);
+        }
+        
+        const responseData = await response.json();
+        console.log('📡 Resposta da API:', responseData);
+        
+        // Verificar formato da resposta
+        if (responseData.cadastros && Array.isArray(responseData.cadastros)) {
+          // Resposta paginada
+          data = responseData.cadastros;
+        } else if (Array.isArray(responseData)) {
+          // Resposta simples (fallback)
+          data = responseData.filter(c => 
+            c.nome.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+            c.email.toLowerCase().includes(searchTerm.trim().toLowerCase())
+          );
+        } else {
+          throw new Error('Formato de resposta inesperado da API');
+        }
       }
+
+      console.log(`✅ Encontrados ${data.length} cadastros`);
 
       if (data.length === 0) {
         setErro('Nenhum cadastro encontrado com o termo pesquisado.');
@@ -54,6 +94,7 @@ function ObterCadastro() {
         setResultados(data);
       }
     } catch (error) {
+      console.error('❌ Erro na busca:', error);
       setErro(error.message);
     } finally {
       setCarregando(false);
@@ -173,7 +214,7 @@ function ObterCadastro() {
                 <Mail size={20} className="text-green-400" />
                 <span className="text-white/60 text-sm font-medium">Email</span>
               </div>
-              <p className="text-white font-medium">{cadastroSelecionado.email}</p>
+              <p className="text-white font-medium break-all">{cadastroSelecionado.email}</p>
             </div>
             
             <div className="bg-white/5 rounded-xl p-4 border border-white/10">
@@ -189,7 +230,7 @@ function ObterCadastro() {
                 <Calendar size={20} className="text-purple-400" />
                 <span className="text-white/60 text-sm font-medium">Data de Nascimento</span>
               </div>
-              <p className="text-white font-medium">{cadastroSelecionado.data_nascimento}</p>
+              <p className="text-white font-medium">{formatarData(cadastroSelecionado.data_nascimento)}</p>
             </div>
             
             {cadastroSelecionado.endereco && (
@@ -199,6 +240,19 @@ function ObterCadastro() {
                   <span className="text-white/60 text-sm font-medium">Endereço</span>
                 </div>
                 <p className="text-white font-medium">{cadastroSelecionado.endereco}</p>
+              </div>
+            )}
+
+            {cadastroSelecionado.data_criacao && (
+              <div className="md:col-span-2 bg-white/5 rounded-xl p-4 border border-white/10">
+                <div className="flex items-center gap-3 mb-2">
+                  <Calendar size={20} className="text-cyan-400" />
+                  <span className="text-white/60 text-sm font-medium">Data de Cadastro</span>
+                </div>
+                <p className="text-white font-medium">
+                  {new Date(cadastroSelecionado.data_criacao).toLocaleDateString('pt-BR')} às {' '}
+                  {new Date(cadastroSelecionado.data_criacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </p>
               </div>
             )}
           </div>
@@ -240,7 +294,7 @@ function ObterCadastro() {
                   {resultado.data_nascimento && (
                     <div className="flex items-center gap-2 text-white/70">
                       <Calendar size={14} className="text-purple-400" />
-                      <span className="text-sm">{resultado.data_nascimento}</span>
+                      <span className="text-sm">{formatarData(resultado.data_nascimento)}</span>
                     </div>
                   )}
                 </div>
@@ -265,6 +319,12 @@ function ObterCadastro() {
             Use o campo acima para pesquisar por ID (número) ou nome/email (texto). 
             Os resultados aparecerão aqui de forma organizada.
           </p>
+          <div className="mt-6 space-y-2 text-white/50 text-sm">
+            <p><strong>Exemplos de busca:</strong></p>
+            <p>• Digite "1" para buscar o cadastro com ID 1</p>
+            <p>• Digite "João" para buscar por nome</p>
+            <p>• Digite "email@exemplo.com" para buscar por email</p>
+          </div>
         </div>
       )}
     </div>

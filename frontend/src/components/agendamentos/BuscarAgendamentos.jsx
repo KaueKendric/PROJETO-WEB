@@ -42,12 +42,38 @@ function BuscarAgendamento() {
     return cores[tipo] || '#6b7280';
   };
 
-  const formatarData = (data) => {
-    return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
+  const formatarData = (dataHora) => {
+    try {
+      const data = new Date(dataHora);
+      return data.toLocaleDateString('pt-BR');
+    // eslint-disable-next-line no-unused-vars
+    } catch (error) {
+      return 'Data inválida';
+    }
   };
 
-  const formatarHora = (hora) => {
-    return hora.slice(0, 5);
+  const formatarHora = (dataHora) => {
+    try {
+      const data = new Date(dataHora);
+      return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    // eslint-disable-next-line no-unused-vars
+    } catch (error) {
+      return 'Hora inválida';
+    }
+  };
+
+  const formatarParticipantes = (participantes) => {
+    if (!participantes || participantes.length === 0) {
+      return 'Nenhum participante';
+    }
+    
+    if (participantes.length === 1) {
+      return participantes[0].nome;
+    } else if (participantes.length <= 3) {
+      return participantes.map(p => p.nome).join(', ');
+    } else {
+      return `${participantes.slice(0, 2).map(p => p.nome).join(', ')} e mais ${participantes.length - 2}`;
+    }
   };
 
   const buscarAgendamentos = async () => {
@@ -67,39 +93,89 @@ function BuscarAgendamento() {
 
       if (isNumeric && searchTerm.trim()) {
         // Busca por ID específico
-        const response = await fetch(`http://localhost:8000/agendamentos/${searchTerm.trim()}`);
+        console.log(`🔍 Buscando agendamento por ID: ${searchTerm.trim()}`);
+        const response = await fetch(`http://localhost:8000/api/agendamentos/${searchTerm.trim()}`);
+        
         if (response.status === 404) {
           throw new Error('Agendamento não encontrado com este ID.');
         }
         if (!response.ok) {
-          throw new Error('Erro ao buscar agendamento por ID.');
+          const errorText = await response.text();
+          throw new Error(`Erro ao buscar agendamento por ID: ${response.status} - ${errorText}`);
         }
-        data = [await response.json()];
-      } else {
-        // Busca geral com filtros
-        const response = await fetch('http://localhost:8000/agendamentos/');
-        if (!response.ok) {
-          throw new Error('Erro ao buscar lista de agendamentos.');
-        }
-        const todos = await response.json();
         
-        data = todos.filter(agendamento => {
-          // Filtro por texto (título, descrição, local, participantes)
+        const agendamento = await response.json();
+        data = [agendamento];
+      } else {
+        // Busca geral usando a API paginada com LIMITE MÁXIMO DE 50
+        console.log(`🔍 Buscando agendamentos com filtros`);
+        
+        // Construir URL da API paginada
+        let filtroAPI = '';
+        
+        // Determinar filtro baseado nos critérios
+        if (filtroTipo) {
+          filtroAPI = filtroTipo;
+        } else if (filtroData) {
+          // Para filtro por data específica, vamos usar busca geral e filtrar depois
+          filtroAPI = 'todos';
+        } else {
+          filtroAPI = 'todos';
+        }
+        
+        // IMPORTANTE: Usando limit=50 (máximo permitido pela API)
+        const url = `http://localhost:8000/api/agendamentos/?limit=50&skip=0&filtro=${filtroAPI}`;
+        console.log(`📡 Fazendo requisição para: ${url}`);
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Erro na resposta:', errorText);
+          throw new Error(`Erro ao buscar agendamentos: ${response.status} - ${errorText}`);
+        }
+        
+        const responseData = await response.json();
+        console.log('📡 Resposta da API:', responseData);
+        
+        // Verificar formato da resposta
+        let agendamentos;
+        if (responseData.agendamentos && Array.isArray(responseData.agendamentos)) {
+          // Resposta paginada
+          agendamentos = responseData.agendamentos;
+        } else if (Array.isArray(responseData)) {
+          // Resposta simples (fallback)
+          agendamentos = responseData;
+        } else {
+          throw new Error('Formato de resposta inesperado da API');
+        }
+        
+        // Aplicar filtros adicionais no frontend
+        data = agendamentos.filter(agendamento => {
+          // Filtro por texto (título, observações, local, participantes)
           const matchTexto = !searchTerm.trim() || 
             agendamento.titulo.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
-            (agendamento.descricao && agendamento.descricao.toLowerCase().includes(searchTerm.trim().toLowerCase())) ||
+            (agendamento.observacoes && agendamento.observacoes.toLowerCase().includes(searchTerm.trim().toLowerCase())) ||
             (agendamento.local && agendamento.local.toLowerCase().includes(searchTerm.trim().toLowerCase())) ||
-            (agendamento.participantes && agendamento.participantes.toLowerCase().includes(searchTerm.trim().toLowerCase()));
+            (agendamento.participantes && 
+             agendamento.participantes.some(p => 
+               p.nome.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+               p.email.toLowerCase().includes(searchTerm.trim().toLowerCase())
+             ));
 
-          // Filtro por data
-          const matchData = !filtroData || agendamento.data === filtroData;
+          // Filtro por data específica
+          const matchData = !filtroData || 
+            (agendamento.data_hora && 
+             new Date(agendamento.data_hora).toISOString().split('T')[0] === filtroData);
 
-          // Filtro por tipo
-          const matchTipo = !filtroTipo || agendamento.tipo === filtroTipo;
+          // Filtro por tipo (já aplicado na API, mas vamos manter para consistência)
+          const matchTipo = !filtroTipo || agendamento.tipo_sessao === filtroTipo;
 
           return matchTexto && matchData && matchTipo;
         });
       }
+
+      console.log(`✅ Encontrados ${data.length} agendamentos`);
 
       if (data.length === 0) {
         setErro('Nenhum agendamento encontrado com os critérios de busca.');
@@ -109,6 +185,7 @@ function BuscarAgendamento() {
         setResultados(data);
       }
     } catch (error) {
+      console.error('❌ Erro na busca:', error);
       setErro(error.message);
     } finally {
       setCarregando(false);
@@ -153,7 +230,7 @@ function BuscarAgendamento() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Digite o ID, título, descrição, local ou participantes"
+              placeholder="Digite o ID, título, local ou nome dos participantes"
               className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm hover:bg-white/10"
             />
           </div>
@@ -192,7 +269,7 @@ function BuscarAgendamento() {
         </div>
         
         <p className="text-white/50 text-sm mt-3 ml-1">
-          💡 Dica: Digite um número para buscar por ID ou texto para busca geral
+          💡 Dica: Digite um número para buscar por ID ou texto para busca geral (máximo 50 resultados)
         </p>
       </div>
 
@@ -279,16 +356,16 @@ function BuscarAgendamento() {
             <div className="flex items-center gap-2">
               <div 
                 className="w-3 h-3 rounded-full" 
-                style={{ backgroundColor: getTipoColor(agendamentoSelecionado.tipo) }}
+                style={{ backgroundColor: getTipoColor(agendamentoSelecionado.tipo_sessao) }}
               ></div>
               <span 
                 className="px-3 py-1 rounded-full text-sm font-medium text-white border"
                 style={{ 
-                  backgroundColor: getTipoColor(agendamentoSelecionado.tipo) + '20',
-                  borderColor: getTipoColor(agendamentoSelecionado.tipo) + '30'
+                  backgroundColor: getTipoColor(agendamentoSelecionado.tipo_sessao) + '20',
+                  borderColor: getTipoColor(agendamentoSelecionado.tipo_sessao) + '30'
                 }}
               >
-                {getTipoLabel(agendamentoSelecionado.tipo)}
+                {getTipoLabel(agendamentoSelecionado.tipo_sessao)}
               </span>
             </div>
           </div>
@@ -299,7 +376,7 @@ function BuscarAgendamento() {
                 <Calendar size={20} className="text-blue-400" />
                 <span className="text-white/60 text-sm font-medium">Data</span>
               </div>
-              <p className="text-white font-semibold text-lg">{formatarData(agendamentoSelecionado.data)}</p>
+              <p className="text-white font-semibold text-lg">{formatarData(agendamentoSelecionado.data_hora)}</p>
             </div>
             
             <div className="bg-white/5 rounded-xl p-4 border border-white/10">
@@ -308,7 +385,12 @@ function BuscarAgendamento() {
                 <span className="text-white/60 text-sm font-medium">Horário</span>
               </div>
               <p className="text-white font-medium">
-                {formatarHora(agendamentoSelecionado.hora_inicio)} - {formatarHora(agendamentoSelecionado.hora_fim)}
+                {formatarHora(agendamentoSelecionado.data_hora)}
+                {agendamentoSelecionado.duracao_em_minutos && (
+                  <span className="text-white/60 ml-1">
+                    ({agendamentoSelecionado.duracao_em_minutos}min)
+                  </span>
+                )}
               </p>
             </div>
             
@@ -322,24 +404,35 @@ function BuscarAgendamento() {
               </div>
             )}
             
-            {agendamentoSelecionado.participantes && (
+            {agendamentoSelecionado.participantes && agendamentoSelecionado.participantes.length > 0 && (
               <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                 <div className="flex items-center gap-3 mb-2">
                   <Users size={20} className="text-purple-400" />
-                  <span className="text-white/60 text-sm font-medium">Participantes</span>
+                  <span className="text-white/60 text-sm font-medium">Participantes ({agendamentoSelecionado.participantes.length})</span>
                 </div>
-                <p className="text-white font-medium">{agendamentoSelecionado.participantes}</p>
+                <div className="space-y-1">
+                  {agendamentoSelecionado.participantes.slice(0, 3).map((participante, index) => (
+                    <p key={index} className="text-white font-medium text-sm">
+                      • {participante.nome} {participante.email && `(${participante.email})`}
+                    </p>
+                  ))}
+                  {agendamentoSelecionado.participantes.length > 3 && (
+                    <p className="text-white/60 text-sm">
+                      ... e mais {agendamentoSelecionado.participantes.length - 3} participante(s)
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>
           
-          {agendamentoSelecionado.descricao && (
+          {agendamentoSelecionado.observacoes && (
             <div className="mt-6 bg-white/5 rounded-xl p-4 border border-white/10">
               <div className="flex items-start gap-3">
                 <FileText size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <span className="text-white/60 text-sm font-medium block mb-2">Descrição</span>
-                  <p className="text-white">{agendamentoSelecionado.descricao}</p>
+                  <span className="text-white/60 text-sm font-medium block mb-2">Observações</span>
+                  <p className="text-white leading-relaxed">{agendamentoSelecionado.observacoes}</p>
                 </div>
               </div>
             </div>
@@ -374,16 +467,16 @@ function BuscarAgendamento() {
                   <div className="flex items-center gap-2">
                     <div 
                       className="w-2 h-2 rounded-full" 
-                      style={{ backgroundColor: getTipoColor(resultado.tipo) }}
+                      style={{ backgroundColor: getTipoColor(resultado.tipo_sessao) }}
                     ></div>
                     <span 
-                      className="px-2 py-1 rounded-full text-xs font-medium text-white"
+                      className="px-2 py-1 rounded-full text-xs font-medium text-white border"
                       style={{ 
-                        backgroundColor: getTipoColor(resultado.tipo) + '20',
-                        borderColor: getTipoColor(resultado.tipo) + '30'
+                        backgroundColor: getTipoColor(resultado.tipo_sessao) + '20',
+                        borderColor: getTipoColor(resultado.tipo_sessao) + '30'
                       }}
                     >
-                      {getTipoLabel(resultado.tipo)}
+                      {getTipoLabel(resultado.tipo_sessao)}
                     </span>
                   </div>
                 </div>
@@ -391,16 +484,22 @@ function BuscarAgendamento() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-white/70">
                     <Calendar size={14} className="text-blue-400" />
-                    <span className="text-sm">{formatarData(resultado.data)}</span>
+                    <span className="text-sm">{formatarData(resultado.data_hora)}</span>
                   </div>
                   <div className="flex items-center gap-2 text-white/70">
                     <Clock size={14} className="text-green-400" />
-                    <span className="text-sm">{formatarHora(resultado.hora_inicio)} - {formatarHora(resultado.hora_fim)}</span>
+                    <span className="text-sm">{formatarHora(resultado.data_hora)}</span>
                   </div>
                   {resultado.local && (
                     <div className="flex items-center gap-2 text-white/70">
                       <MapPin size={14} className="text-red-400" />
                       <span className="text-sm truncate">{resultado.local}</span>
+                    </div>
+                  )}
+                  {resultado.participantes && resultado.participantes.length > 0 && (
+                    <div className="flex items-center gap-2 text-white/70">
+                      <Users size={14} className="text-purple-400" />
+                      <span className="text-sm truncate">{formatarParticipantes(resultado.participantes)}</span>
                     </div>
                   )}
                 </div>
@@ -422,9 +521,16 @@ function BuscarAgendamento() {
           <Search size={64} className="mx-auto mb-6 text-white/20" />
           <h3 className="text-2xl font-bold text-white mb-3">Busque por um agendamento específico</h3>
           <p className="text-white/60 max-w-md mx-auto mb-6">
-            Use o campo acima para pesquisar por ID, título, descrição, local ou participantes. 
+            Use o campo acima para pesquisar por ID, título, local ou participantes. 
             Os resultados aparecerão aqui de forma organizada.
           </p>
+          <div className="mb-6 space-y-2 text-white/50 text-sm">
+            <p><strong>Exemplos de busca:</strong></p>
+            <p>• Digite "1" para buscar o agendamento com ID 1</p>
+            <p>• Digite "Reunião" para buscar por título</p>
+            <p>• Digite "Sala A" para buscar por local</p>
+            <p>• Digite "João" para buscar por participante</p>
+          </div>
           <button
             onClick={() => setFiltrosAtivos(true)}
             className="text-green-400 hover:text-green-300 transition-colors flex items-center gap-2 mx-auto hover:bg-white/5 px-4 py-2 rounded-xl"
