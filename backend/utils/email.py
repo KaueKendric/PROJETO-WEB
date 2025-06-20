@@ -12,7 +12,7 @@ EMAIL_ADDRESS = os.getenv("EMAIL_USER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASS")
 
 # Configura ambiente do Jinja2 (templates HTML)
-template_env = Environment(loader=FileSystemLoader("app/utils/templates"))
+template_env = Environment(loader=FileSystemLoader("backend/utils/templates"))
 
 def render_template(template_name: str, context: dict) -> str:
     """

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Query
+from fastapi import APIRouter, HTTPException, Depends, status, Query, BackgroundTasks
 from typing import List, Dict, Any
 from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session, joinedload
@@ -187,19 +187,19 @@ def aplicar_filtros_agendamento(query, count_query, filtro: str):
     return {"query": query, "count_query": count_query}
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCreate, db: Session = Depends(get_db)):
+async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     
     try:
         print(f"📝 Dados recebidos para criação: {agendamento_data.dict()}")
         
-        # Combinar data e hora usando seu formato
+       
         try:
             data_hora_str = f"{agendamento_data.data} {agendamento_data.hora}:00"
             data_hora = datetime.strptime(data_hora_str, "%Y-%m-%d %H:%M:%S")
         except ValueError as e:
             raise HTTPException(status_code=400, detail=f"Formato de data/hora inválido: {str(e)}")
         
-        # Criar agendamento usando sua estrutura
+       
         db_agendamento = models.Agendamento(
             titulo=agendamento_data.titulo,
             usuario_id=agendamento_data.participantes_ids[0] if agendamento_data.participantes_ids else 1,
@@ -212,11 +212,11 @@ async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCrea
         )
         
         db.add(db_agendamento)
-        db.flush()  # Para obter o ID
+        db.flush()  
         
         print(f"✅ Agendamento criado com ID: {db_agendamento.id}")
         
-        # Adicionar participantes se houver
+       
         if agendamento_data.participantes_ids:
             try:
                 participantes = db.query(models.Cadastro).filter(
@@ -234,8 +234,26 @@ async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCrea
         
         db.commit()
         db.refresh(db_agendamento)
-        
-        # Retornar resposta usando o schema existente
+        for participante in participantes:
+            email_destino = (participante.email or "").strip()
+            if not email_destino:
+                continue
+            context = {
+                "nome": participante.nome,
+                "titulo": db_agendamento.titulo,
+                "data_hora": data_hora.strftime("%d/%m/%Y %H:%M"),
+                "local": db_agendamento.local,
+                "descricao": db_agendamento.observacoes              
+            }
+            enviar_email_background(
+                background_tasks,
+                destinatario=email_destino,
+                assunto="Novo Agendamento",
+                template_name="agendamento.html",
+                context=context
+                
+            )
+        return {"msg": "Agendamento criado e e-mails enviados"}
         return agendamento_schema.AgendamentoResponse.from_orm(db_agendamento)
         
     except HTTPException:

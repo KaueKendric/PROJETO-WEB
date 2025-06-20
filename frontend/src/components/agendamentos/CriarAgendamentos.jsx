@@ -22,11 +22,20 @@ function CriarAgendamento() {
   const inputParticipanteRef = useRef(null);
   const listaParticipantesRef = useRef(null);
 
-  // Buscar cadastros do backend - URL CORRIGIDA
+  
+  // Opções de tipo de agendamento
+  const tiposAgendamento = [
+    { value: 'reuniao', label: 'Reunião', icon: '👥' },
+    { value: 'consulta', label: 'Consulta', icon: '🩺' },
+    { value: 'evento', label: 'Evento', icon: '🎉' },
+    { value: 'outros', label: 'Outros', icon: '📋' }
+  ];
+
+  // Buscar cadastros do backend
   useEffect(() => {
     const fetchCadastros = async () => {
       try {
-        const response = await fetchApi('/api/cadastros'); // URL CORRIGIDA
+        const response = await fetchApi('/api/cadastros');
         console.log("Cadastro",response)
         if (!response) {
           
@@ -117,13 +126,13 @@ function CriarAgendamento() {
         local: agendamento.local,
         descricao: agendamento.descricao,
         participantes_ids: agendamento.participantes.map(p => p.id),
-        tipo_sessao: 'reuniao',
+        tipo_sessao: agendamento.tipo,
         duracao_em_minutos: 60
       };
 
       console.log('📤 Enviando agendamento:', dadosAgendamento);
 
-      const response = await fetchApi('/api/agendamentos/', { // URL CORRIGIDA
+      const response = await fetchApi('/api/agendamentos/', { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -198,6 +207,31 @@ function CriarAgendamento() {
             placeholder="Ex: Reunião de equipe, Consulta médica..."
             className="w-full px-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm"
           />
+        </div>
+
+        {/* Tipo de Agendamento */}
+        <div>
+          <label className="block text-white font-medium mb-2">
+            
+            Tipo de Agendamento *
+          </label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {tiposAgendamento.map((tipo) => (
+              <button
+                key={tipo.value}
+                type="button"
+                onClick={() => handleInputChange('tipo', tipo.value)}
+                className={`p-3 rounded-xl border transition-all duration-300 flex flex-col items-center gap-2 ${
+                  agendamento.tipo === tipo.value
+                    ? 'bg-green-500/20 border-green-400/50 text-green-300'
+                    : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20'
+                }`}
+              >
+                <span className="text-2xl">{tipo.icon}</span>
+                <span className="text-sm font-medium">{tipo.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Data e Hora */}
@@ -363,7 +397,8 @@ function CriarAgendamento() {
                 hora: '',
                 local: '',
                 descricao: '',
-                participantes: []
+                participantes: [],
+                tipo: 'reuniao'
               });
               setMensagem({ tipo: '', texto: '' });
             }}
