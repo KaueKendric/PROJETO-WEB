@@ -9,17 +9,14 @@ function ObterCadastro() {
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
 
-  // Função para formatar data
   const formatarData = (data) => {
     if (!data) return '';
 
-    // Se já está no formato ISO (YYYY-MM-DD)
     if (data.includes('-')) {
       const [ano, mes, dia] = data.split('-');
       return `${dia}/${mes}/${ano}`;
     }
 
-    // Se está no formato brasileiro (DD/MM/YYYY)
     return data;
   };
 
@@ -39,7 +36,7 @@ function ObterCadastro() {
       let data;
 
       if (isNumeric) {
-        // Busca por ID específico
+   
         console.log(`🔍 Buscando cadastro por ID: ${searchTerm.trim()}`);
         const response = await fetchApi(`/api/cadastros/${searchTerm.trim()}`);
 
@@ -54,10 +51,10 @@ function ObterCadastro() {
         const cadastro =  response;
         data = [cadastro];
       } else {
-        // Busca por nome/email usando a API paginada
+
         console.log(`🔍 Buscando cadastros com filtro: "${searchTerm.trim()}"`);
 
-        // Usar a API paginada com filtro
+  
         const response = await fetchApi(
           `/api/cadastros/?limit=50&skip=0&filtro=${encodeURIComponent(searchTerm.trim())}`
         );
@@ -70,12 +67,11 @@ function ObterCadastro() {
         const responseData = response;
         console.log('📡 Resposta da API:', responseData);
 
-        // Verificar formato da resposta
         if (responseData.cadastros && Array.isArray(responseData.cadastros)) {
-          // Resposta paginada
+
           data = responseData.cadastros;
         } else if (Array.isArray(responseData)) {
-          // Resposta simples (fallback)
+  
           data = responseData.filter(c =>
             c.nome.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
             c.email.toLowerCase().includes(searchTerm.trim().toLowerCase())

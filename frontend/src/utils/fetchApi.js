@@ -1,16 +1,15 @@
 import axios from 'axios';
 
-// Configuração da instância do Axios
+
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-    timeout: 5000, // 30 segundos
+    timeout: 5000, 
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     }
 });
 
-// Interceptador para requisições (opcional - adicionar token de auth, etc.)
 api.interceptors.request.use(
     (config) => {
         console.log(`🚀 Fazendo requisição ${config.method?.toUpperCase()} para: ${config.url}`);
@@ -22,7 +21,6 @@ api.interceptors.request.use(
     }
 );
 
-// Interceptador para respostas (tratamento global de erros)
 api.interceptors.response.use(
     (response) => {
         console.log(`✅ Resposta recebida: ${response.status} - ${response.config.url}`);
@@ -31,7 +29,6 @@ api.interceptors.response.use(
     (error) => {
         console.error('❌ Erro na resposta:', error.response?.data || error.message);
         
-        // Tratamento específico de erros
         if (error.response?.status === 422) {
             console.error('❌ Erro de validação (422):', error.response.data);
         } else if (error.response?.status === 404) {
@@ -44,7 +41,7 @@ api.interceptors.response.use(
     }
 );
 
-// Função principal corrigida
+
 export default async function fetchApi(url, options = {}) {
     const {
         method = 'GET',
@@ -61,11 +58,11 @@ export default async function fetchApi(url, options = {}) {
             headers: {
                 ...headers
             },
-            params, // Para query parameters (?limit=6&skip=0)
+            params, 
             ...rest,
         };
 
-        // Tratar body corretamente
+
         if (body) {
             if (typeof body === 'string') {
                 try {
@@ -85,7 +82,6 @@ export default async function fetchApi(url, options = {}) {
         return response.data;
         
     } catch (error) {
-        // Re-throw com informações mais claras
         const errorMessage = error.response?.data?.detail || 
                            error.response?.data?.message || 
                            error.message || 
@@ -100,7 +96,6 @@ export default async function fetchApi(url, options = {}) {
     }
 }
 
-// Funções de conveniência específicas
 export const apiGet = async (url, params = {}) => {
     return fetchApi(url, { method: 'GET', params });
 };
@@ -123,66 +118,58 @@ export const apiDelete = async (url) => {
     return fetchApi(url, { method: 'DELETE' });
 };
 
-// Funções específicas para seus endpoints
 export const cadastrosApi = {
-    // Listar com paginação
+
     listar: (limit = 6, skip = 0, filtro = '') => {
         return apiGet('/cadastros/', { limit, skip, filtro });
     },
     
-    // Buscar por ID
     buscarPorId: (id) => {
         return apiGet(`/cadastros/${id}`);
     },
     
-    // Criar novo
+
     criar: (dados) => {
         return apiPost('/cadastros/', dados);
     },
     
-    // Atualizar
     atualizar: (id, dados) => {
         return apiPut(`/cadastros/${id}`, dados);
     },
     
-    // Excluir
     excluir: (id) => {
         return apiDelete(`/cadastros/${id}`);
     },
     
-    // Estatísticas
+
     estatisticas: () => {
         return apiGet('/cadastros/stats/resumo');
     }
 };
 
 export const agendamentosApi = {
-    // Listar com paginação
+ 
     listar: (limit = 6, skip = 0, filtro = 'todos') => {
         return apiGet('/api/agendamentos/', { limit, skip, filtro });
     },
     
-    // Buscar por ID
+
     buscarPorId: (id) => {
         return apiGet(`/api/agendamentos/${id}`);
     },
     
-    // Criar novo
     criar: (dados) => {
         return apiPost('/api/agendamentos/', dados);
     },
     
-    // Atualizar
     atualizar: (id, dados) => {
         return apiPut(`/api/agendamentos/${id}`, dados);
     },
     
-    // Excluir
     excluir: (id) => {
         return apiDelete(`/api/agendamentos/${id}`);
     },
     
-    // Estatísticas
     estatisticas: () => {
         return apiGet('/api/agendamentos/stats/resumo');
     }

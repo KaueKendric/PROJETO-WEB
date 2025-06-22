@@ -93,7 +93,7 @@ function BuscarAgendamento() {
       let data;
 
       if (isNumeric && searchTerm.trim()) {
-        // Busca por ID específico
+
         console.log(`🔍 Buscando agendamento por ID: ${searchTerm.trim()}`);
         const response = await fetchApi(`/api/agendamentos/${searchTerm.trim()}`);
 
@@ -108,23 +108,19 @@ function BuscarAgendamento() {
         const agendamento = response;
         data = [agendamento];
       } else {
-        // Busca geral usando a API paginada com LIMITE MÁXIMO DE 50
+
         console.log(`🔍 Buscando agendamentos com filtros`);
 
-        // Construir URL da API paginada
         let filtroAPI = '';
 
-        // Determinar filtro baseado nos critérios
         if (filtroTipo) {
           filtroAPI = filtroTipo;
         } else if (filtroData) {
-          // Para filtro por data específica, vamos usar busca geral e filtrar depois
           filtroAPI = 'todos';
         } else {
           filtroAPI = 'todos';
         }
 
-        // IMPORTANTE: Usando limit=50 (máximo permitido pela API)
         const url = `/api/agendamentos/?limit=50&skip=0&filtro=${filtroAPI}`;
         console.log(`📡 Fazendo requisição para: ${url}`);
 
@@ -139,21 +135,15 @@ function BuscarAgendamento() {
         const responseData = response;
         console.log('📡 Resposta da API:', responseData);
 
-        // Verificar formato da resposta
         let agendamentos;
         if (responseData.agendamentos && Array.isArray(responseData.agendamentos)) {
-          // Resposta paginada
           agendamentos = responseData.agendamentos;
         } else if (Array.isArray(responseData)) {
-          // Resposta simples (fallback)
           agendamentos = responseData;
         } else {
           throw new Error('Formato de resposta inesperado da API');
         }
-
-        // Aplicar filtros adicionais no frontend
         data = agendamentos.filter(agendamento => {
-          // Filtro por texto (título, observações, local, participantes)
           const matchTexto = !searchTerm.trim() ||
             agendamento.titulo.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
             (agendamento.observacoes && agendamento.observacoes.toLowerCase().includes(searchTerm.trim().toLowerCase())) ||
@@ -163,13 +153,10 @@ function BuscarAgendamento() {
                 p.nome.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
                 p.email.toLowerCase().includes(searchTerm.trim().toLowerCase())
               ));
-
-          // Filtro por data específica
           const matchData = !filtroData ||
             (agendamento.data_hora &&
               new Date(agendamento.data_hora).toISOString().split('T')[0] === filtroData);
 
-          // Filtro por tipo (já aplicado na API, mas vamos manter para consistência)
           const matchTipo = !filtroTipo || agendamento.tipo_sessao === filtroTipo;
 
           return matchTexto && matchData && matchTipo;
@@ -269,7 +256,6 @@ function BuscarAgendamento() {
         </div>
 
         <p className="text-white/50 text-sm mt-3 ml-1">
-          💡 Dica: Digite um número para buscar por ID ou texto para busca geral (máximo 50 resultados)
         </p>
       </div>
 

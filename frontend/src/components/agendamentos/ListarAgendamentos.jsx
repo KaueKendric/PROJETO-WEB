@@ -9,7 +9,6 @@ function ListaAgendamento() {
   const [filtro, setFiltro] = useState('todos');
   const [agendamentoSelecionado, setAgendamentoSelecionado] = useState(null);
   
-  // Estados para paginação
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totalAgendamentos, setTotalAgendamentos] = useState(0);
   const [carregandoPagina, setCarregandoPagina] = useState(false);
@@ -81,7 +80,7 @@ function ListaAgendamento() {
     }
   };
 
-  // Função para buscar agendamentos com paginação
+ 
   const fetchAgendamentos = async (pagina = 1, filtroAtual = filtro) => {
     try {
       console.log(`📅 Buscando agendamentos - Página ${pagina}, Filtro: ${filtroAtual}`);
@@ -91,7 +90,6 @@ function ListaAgendamento() {
       const skip = (pagina - 1) * limitePorPagina;
       let url = `/api/agendamentos/?limit=${limitePorPagina}&skip=${skip}`;
       
-      // Adicionar filtro à URL se não for 'todos'
       if (filtroAtual !== 'todos') {
         url += `&filtro=${filtroAtual}`;
       }
@@ -109,12 +107,12 @@ function ListaAgendamento() {
       const data = response;
       console.log('✅ Agendamentos recebidos:', data);
       
-      // Esperando uma resposta com formato: { agendamentos: [], total: number }
+
       if (data.agendamentos && typeof data.total === 'number') {
         setAgendamentos(data.agendamentos);
         setTotalAgendamentos(data.total);
       } else {
-        // Fallback para resposta simples (array)
+
         setAgendamentos(data);
         setTotalAgendamentos(data.length);
       }
@@ -128,19 +126,16 @@ function ListaAgendamento() {
     }
   };
 
-  // Carregar agendamentos na inicialização
   useEffect(() => {
     setCarregando(true);
     fetchAgendamentos(1, filtro);
   }, []);
 
-  // Recarregar quando filtro mudar
   useEffect(() => {
     setPaginaAtual(1);
     fetchAgendamentos(1, filtro);
   }, [filtro]);
 
-  // Mudar página
   const mudarPagina = (novaPagina) => {
     if (novaPagina >= 1 && novaPagina <= totalPaginas) {
       setPaginaAtual(novaPagina);
@@ -148,10 +143,8 @@ function ListaAgendamento() {
     }
   };
 
-  // Calcular total de páginas
   const totalPaginas = Math.ceil(totalAgendamentos / limitePorPagina);
 
-  // Gerar números das páginas para navegação
   const obterNumerosPaginas = () => {
     const numeros = [];
     const maxVisivel = 5;

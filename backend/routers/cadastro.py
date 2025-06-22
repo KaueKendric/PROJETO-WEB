@@ -13,7 +13,6 @@ router = APIRouter(
     tags=["cadastros"],
 )
 
-# Schema para resposta paginada (adicionar ao schema)
 from pydantic import BaseModel
 
 
@@ -28,8 +27,6 @@ class CadastroPaginado(BaseModel):
     temProxima: bool
     temAnterior: bool
 
-
-# ✅ Listagem de cadastros (mantido para compatibilidade)
 @router.get("/")
 async def listar_cadastros(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
@@ -57,9 +54,7 @@ async def obter_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
 async def criar_cadastro(
     cadastro: cadastro_schema.Cadastro, db: Session = Depends(get_db)
 ):
-    """
-    Criar um novo cadastro
-    """
+
     try:
         print(f"📝 Criando cadastro: {cadastro.nome}")
 
@@ -83,9 +78,7 @@ async def atualizar_cadastro(
     cadastro_data: cadastro_schema.Cadastro,
     db: Session = Depends(get_db),
 ):
-    """
-    Atualizar cadastro existente
-    """
+
     try:
         db_cadastro = (
             db.query(models.Cadastro).filter(models.Cadastro.id == cadastro_id).first()
@@ -119,9 +112,7 @@ async def atualizar_cadastro(
 
 @router.delete("/{cadastro_id}")
 async def excluir_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
-    """
-    Excluir cadastro
-    """
+
     try:
         db_cadastro = (
             db.query(models.Cadastro).filter(models.Cadastro.id == cadastro_id).first()
@@ -149,9 +140,7 @@ async def excluir_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
 
 @router.get("/stats/resumo")
 async def obter_estatisticas_cadastros(db: Session = Depends(get_db)):
-    """
-    Obter estatísticas dos cadastros para dashboard
-    """
+ 
     try:
         from datetime import datetime, timedelta
 
@@ -159,10 +148,8 @@ async def obter_estatisticas_cadastros(db: Session = Depends(get_db)):
         inicio_mes = datetime(hoje.year, hoje.month, 1).date()
         mes_passado = (inicio_mes - timedelta(days=1)).replace(day=1)
 
-        # Contar estatísticas
         total = db.query(func.count(models.Cadastro.id)).scalar()
 
-        # Se tiver campo data_criacao
         try:
             este_mes = (
                 db.query(func.count(models.Cadastro.id))
@@ -199,8 +186,6 @@ async def obter_estatisticas_cadastros(db: Session = Depends(get_db)):
             status_code=500, detail=f"Erro ao buscar estatísticas: {str(e)}"
         )
 
-
-# Endpoint para busca avançada (compatibilidade com código existente)
 @router.get("/buscar/avancada")
 async def buscar_cadastros_avancada(
     nome: Optional[str] = None,
@@ -210,9 +195,7 @@ async def buscar_cadastros_avancada(
     limit: int = 100,
     db: Session = Depends(get_db),
 ):
-    """
-    Busca avançada de cadastros (mantido para compatibilidade)
-    """
+
     try:
         query = db.query(models.Cadastro)
 
@@ -241,9 +224,6 @@ async def buscar_cadastros_avancada(
 # Endpoint de teste
 @router.get("/test/database")
 async def test_database_cadastros(db: Session = Depends(get_db)):
-    """
-    Endpoint de teste para verificar se o banco está funcionando
-    """
     try:
         # Teste básico
         count_cadastros = db.query(models.Cadastro).count()

@@ -1,6 +1,4 @@
-/* Adicione estas classes ao seu arquivo CSS principal (App.css ou index.css) */
 
-/* Animação de entrada suave */
 @keyframes fadeInUp {
     from {
       opacity: 0;
@@ -12,45 +10,38 @@
     }
   }
   
-  /* Animação de shake para erros */
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
     10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
     20%, 40%, 60%, 80% { transform: translateX(5px); }
   }
   
-  /* Animação de brilho que passa pelo botão */
   @keyframes shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
   }
   
-  /* Animação de gradiente para backgrounds */
   @keyframes gradientShift {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
   }
   
-  /* Animação de flutuação suave */
   @keyframes float {
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-10px); }
   }
   
-  /* Animação de respiração para elementos */
   @keyframes breathe {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); }
   }
   
-  /* Animação de rotação suave */
   @keyframes gentleRotate {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
   
-  /* Classes utilitárias para as animações */
   .animate-fadeInUp {
     animation: fadeInUp 0.8s ease-out;
   }
@@ -80,7 +71,7 @@
     animation: gentleRotate 10s linear infinite;
   }
   
-  /* Efeitos de hover melhorados */
+
   .hover-glow:hover {
     box-shadow: 0 0 30px rgba(147, 51, 234, 0.3);
     transition: box-shadow 0.3s ease;
@@ -91,14 +82,13 @@
     transition: transform 0.3s ease;
   }
   
-  /* Gradient animado para backgrounds */
+
   .bg-animated-gradient {
     background: linear-gradient(-45deg, #1e1b4b, #581c87, #be185d, #1e40af);
     background-size: 400% 400%;
     animation: gradientShift 8s ease infinite;
   }
   
-  /* Efeito de glassmorphism aprimorado */
   .glass-morphism {
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(20px);
@@ -106,7 +96,7 @@
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
   }
   
-  /* Efeito de borda animada */
+
   .animated-border {
     position: relative;
     overflow: hidden;
@@ -124,7 +114,6 @@
     animation: gentleRotate 3s linear infinite;
   }
   
-  /* Efeito de typing para textos */
   @keyframes typing {
     from { width: 0; }
     to { width: 100%; }
@@ -141,7 +130,7 @@
     animation: typing 2s steps(30, end), blink 1s step-end infinite;
   }
   
-  /* Partículas flutuantes */
+
   @keyframes floatParticle {
     0% {
       transform: translateY(100vh) translateX(0px) rotate(0deg);
@@ -165,7 +154,7 @@
     animation: floatParticle 8s linear infinite;
   }
   
-  /* Efeito de onda para inputs */
+
   .wave-input {
     position: relative;
     overflow: hidden;
@@ -186,7 +175,6 @@
     left: 100%;
   }
   
-  /* Responsividade para animações */
   @media (prefers-reduced-motion: reduce) {
     * {
       animation-duration: 0.01ms !important;
@@ -195,14 +183,14 @@
     }
   }
   
-  /* Dark mode específico para o login */
+
   @media (prefers-color-scheme: dark) {
     .login-container {
       background: linear-gradient(-45deg, #0f0f23, #1a0933, #2d1b45, #0f1829);
     }
   }
   
-  /* Melhorias para mobile */
+
   @media (max-width: 768px) {
     .mobile-optimized {
       touch-action: manipulation;
@@ -215,7 +203,7 @@
     }
   }
   
-  /* Efeitos especiais para elementos premium */
+
   .premium-glow {
     filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.3));
   }

@@ -20,8 +20,6 @@ def get_summary(db: Session = Depends(get_db)):
     except Exception:
         raise HTTPException(status_code=500, detail="Erro ao buscar dados do dashboard")
 
-
-# ✅ Estatísticas de atividade
 @router.get("/atividade")
 def get_atividade(db: Session = Depends(get_db)):
     try:

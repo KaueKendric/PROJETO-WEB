@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Plus, Search, LogOut, Home, ChevronDown, Clock } from 'lucide-react';
-
-// Componentes das abas
 import CriarAgendamento from '../components/agendamentos/CriarAgendamentos';
 import ListaAgendamento from '../components/agendamentos/ListarAgendamentos';
 import BuscarAgendamento from '../components/agendamentos/BuscarAgendamentos';

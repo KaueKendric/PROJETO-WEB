@@ -5,19 +5,15 @@ from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 from fastapi import BackgroundTasks
 
-# Carrega variáveis de ambiente
 load_dotenv()
 
 EMAIL_ADDRESS = os.getenv("EMAIL_USER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASS")
 
-# Configura ambiente do Jinja2 (templates HTML)
 template_env = Environment(loader=FileSystemLoader("backend/utils/templates"))
 
 def render_template(template_name: str, context: dict) -> str:
-    """
-    Renderiza um template HTML usando Jinja2.
-    """
+
     template = template_env.get_template(template_name)
     return template.render(context)
 
@@ -29,9 +25,7 @@ def enviar_email_background(
     template_name: str,
     context: dict
 ):
-    """
-    Enfileira tarefa para envio de e-mail com template HTML via BackgroundTasks.
-    """
+
     html_content = render_template(template_name, context)
     print("🔎 Conteúdo HTML renderizado:")
     print(html_content)
@@ -39,9 +33,7 @@ def enviar_email_background(
     
 
 def enviar_email(destinatario: str, assunto: str, html_content: str):
-    """
-    Envia o e-mail usando smtplib com conteúdo HTML.
-    """
+
     msg = EmailMessage()
     msg["Subject"] = assunto
     msg["From"] = EMAIL_ADDRESS

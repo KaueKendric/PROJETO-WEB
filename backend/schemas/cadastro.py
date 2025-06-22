@@ -3,7 +3,6 @@ from typing import Optional, List, Dict, Any
 from datetime import date
 import datetime
 
-# Schema principal (mantido do seu código)
 class Cadastro(BaseModel):
     id: Optional[int] = None  
     nome: str
@@ -33,7 +32,6 @@ class Cadastro(BaseModel):
             }
         }
 
-# ✅ NOVO: Schema para resposta paginada
 class CadastroPaginado(BaseModel):
     """Schema para resposta paginada de cadastros"""
     cadastros: List[Dict[str, Any]] = Field(..., description="Lista de cadastros")
@@ -71,7 +69,6 @@ class CadastroPaginado(BaseModel):
             }
         }
 
-# ✅ NOVO: Schema para criação de cadastro
 class CadastroCreate(BaseModel):
     """Schema para criação de cadastro"""
     nome: str = Field(..., min_length=1, max_length=255, description="Nome completo")
@@ -109,7 +106,6 @@ class CadastroCreate(BaseModel):
             }
         }
 
-# ✅ NOVO: Schema para atualização de cadastro
 class CadastroUpdate(BaseModel):
     """Schema para atualização de cadastro"""
     nome: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -138,7 +134,6 @@ class CadastroUpdate(BaseModel):
             raise ValueError('Email deve conter @')
         return v.lower() if v else v
 
-# ✅ NOVO: Schema para resposta de cadastro
 class CadastroResponse(BaseModel):
     """Schema para resposta de cadastro"""
     id: int
@@ -163,7 +158,6 @@ class CadastroResponse(BaseModel):
             }
         }
 
-# ✅ NOVO: Schema para estatísticas de cadastros
 class CadastroStats(BaseModel):
     """Schema para estatísticas de cadastros"""
     total: int = Field(..., description="Total de cadastros")
@@ -181,7 +175,6 @@ class CadastroStats(BaseModel):
             }
         }
 
-# ✅ NOVO: Schema para busca avançada
 class CadastroBusca(BaseModel):
     """Schema para parâmetros de busca"""
     nome: Optional[str] = Field(None, description="Buscar por nome")
@@ -190,7 +183,6 @@ class CadastroBusca(BaseModel):
     skip: int = Field(0, ge=0, description="Registros para pular")
     limit: int = Field(100, ge=1, le=1000, description="Limite de registros")
 
-# ✅ NOVO: Schema para resposta de operações
 class OperacaoResponse(BaseModel):
     """Schema para respostas de operações simples"""
     message: str

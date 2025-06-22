@@ -4,15 +4,9 @@ from pydantic import BaseModel
 from typing import Optional
 import secrets
 
-# 🔐 Security para proteger rotas
 security = HTTPBearer(auto_error=False)
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
-
-
-# ==========================================
-# SCHEMAS
-# ==========================================
 class LoginRequest(BaseModel):
     email: str
     password: str
@@ -24,24 +18,11 @@ class LoginResponse(BaseModel):
     user: Optional[dict] = None
     token: Optional[str] = None
 
-
-# ==========================================
-# Função auxiliar de geração de token fake
-# ==========================================
 def generate_token() -> str:
     return secrets.token_urlsafe(32)
 
-
-# ==========================================
-# ROTAS DE AUTENTICAÇÃO
-# ==========================================
-
-
 @router.post("/login", response_model=LoginResponse)
 async def login(login_data: LoginRequest):
-    """
-    Login fixo com usuário admin / senha 123456
-    """
 
     if login_data.email == "admin" and login_data.password == "123456":
         return LoginResponse(
@@ -56,9 +37,7 @@ async def login(login_data: LoginRequest):
 
 @router.post("/logout")
 async def logout():
-    """
-    Logout do usuário
-    """
+
     return {"success": True, "message": "Logout realizado com sucesso"}
 
 
@@ -66,9 +45,7 @@ async def logout():
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """
-    Obter dados do usuário atual (simulado com token)
-    """
+
     if not credentials:
         raise HTTPException(status_code=401, detail="Token de autenticação necessário")
 
@@ -77,9 +54,7 @@ async def get_current_user(
 
 @router.get("/check")
 async def check_auth():
-    """
-    Verificar se o sistema de autenticação está funcionando
-    """
+
     return {
         "status": "online",
         "message": "Sistema de autenticação funcionando corretamente",
@@ -91,8 +66,6 @@ async def check_auth():
         },
     }
 
-
-# ✅ Aceitar tanto /login como /login/
 @router.post("/login/", response_model=LoginResponse)
 async def login_with_slash(login_data: LoginRequest):
     return await login(login_data)

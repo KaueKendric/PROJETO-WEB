@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-
-// Importações das páginas
 import LoginPage from './LoginPage';
 import DashboardPage from './DashboardPage';
 import CadastroPage from './CadastroPage';
 import AgendamentoPage from './AgendamentoPage';
 
-// Componente de rota protegida
+
 function ProtectedRoute({ children, isLoggedIn }) {
   return isLoggedIn ? children : <Navigate to="/login" replace />;
 }

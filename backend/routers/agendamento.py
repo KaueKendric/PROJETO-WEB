@@ -15,7 +15,6 @@ router = APIRouter(
     tags=["agendamentos"],
 )
 
-# Schema para resposta paginada (adicionado ao seu schema existente)
 from pydantic import BaseModel
 
 class AgendamentoPaginado(BaseModel):
@@ -43,19 +42,15 @@ async def listar_agendamentos(
         pagina = (skip // limit) + 1
         print(f"📅 Buscando agendamentos - Página: {pagina}, Limit: {limit}, Skip: {skip}, Filtro: {filtro}")
         
-        # Query base com eager loading dos participantes
         query = db.query(models.Agendamento).options(joinedload(models.Agendamento.participantes))
         count_query = db.query(func.count(models.Agendamento.id))
         
-        # Aplicar filtros baseados no seu modelo
         filtros_aplicados = aplicar_filtros_agendamento(query, count_query, filtro)
         query = filtros_aplicados["query"]
         count_query = filtros_aplicados["count_query"]
         
-        # Contar total de registros
         total = count_query.scalar()
         
-        # Aplicar paginação e ordenação
         agendamentos = (
             query
             .order_by(models.Agendamento.data_hora.desc(), models.Agendamento.data_criacao.desc())
@@ -64,11 +59,9 @@ async def listar_agendamentos(
             .all()
         )
         
-        # Processar agendamentos para resposta
         agendamentos_processados = []
         for agendamento in agendamentos:
             try:
-                # Buscar participantes de forma segura
                 participantes = []
                 try:
                     participantes = [
@@ -96,7 +89,6 @@ async def listar_agendamentos(
                     "participantes": participantes,
                     "data_criacao": agendamento.data_criacao.isoformat() if agendamento.data_criacao else None,
                     "data_atualizacao": agendamento.data_atualizacao.isoformat() if agendamento.data_atualizacao else None,
-                    # Propriedades calculadas do seu modelo
                     "participantes_count": len(participantes),
                     "duracao_formatada": agendamento.duracao_formatada,
                     "status_cor": agendamento.status_cor
@@ -105,7 +97,6 @@ async def listar_agendamentos(
                 
             except Exception as e:
                 print(f"❌ Erro ao processar agendamento {agendamento.id}: {e}")
-                # Incluir agendamento básico mesmo com erro
                 agendamentos_processados.append({
                     "id": agendamento.id,
                     "titulo": getattr(agendamento, 'titulo', 'Título não disponível'),
@@ -120,8 +111,7 @@ async def listar_agendamentos(
                     "error": f"Erro ao processar: {str(e)}"
                 })
         
-        # Calcular metadados de paginação
-        total_paginas = (total + limit - 1) // limit  # Ceiling division
+        total_paginas = (total + limit - 1) // limit 
         
         print(f"✅ Retornando {len(agendamentos_processados)} agendamentos de {total} total")
         
@@ -151,11 +141,9 @@ def aplicar_filtros_agendamento(query, count_query, filtro: str):
     inicio_hoje = datetime.combine(hoje, datetime.min.time())
     fim_hoje = datetime.combine(hoje + timedelta(days=1), datetime.min.time())
     
-    # Calcular início da semana (domingo = 0)
     dias_desde_domingo = hoje.weekday() + 1 if hoje.weekday() != 6 else 0
     inicio_semana = datetime.combine(hoje - timedelta(days=dias_desde_domingo), datetime.min.time())
     
-    # Calcular início do mês
     inicio_mes = datetime.combine(hoje.replace(day=1), datetime.min.time())
     
     if filtro == "hoje":
@@ -177,7 +165,7 @@ def aplicar_filtros_agendamento(query, count_query, filtro: str):
         filtro_condicao = models.Agendamento.status == "realizado"
     elif filtro == "cancelado":
         filtro_condicao = models.Agendamento.status == "cancelado"
-    else:  # "todos"
+    else: 
         filtro_condicao = None
     
     if filtro_condicao is not None:
@@ -296,9 +284,7 @@ async def atualizar_agendamento(
     agendamento_data: agendamento_schema.AgendamentoUpdate, 
     db: Session = Depends(get_db)
 ):
-    """
-    Atualizar agendamento existente
-    """
+   
     try:
         db_agendamento = db.query(models.Agendamento).filter(
             models.Agendamento.id == agendamento_id
@@ -307,10 +293,8 @@ async def atualizar_agendamento(
         if not db_agendamento:
             raise HTTPException(status_code=404, detail="Agendamento não encontrado")
         
-        # Atualizar campos fornecidos
         dados_atualizacao = agendamento_data.dict(exclude_unset=True)
         
-        # Processar data e hora se fornecidos
         if 'data' in dados_atualizacao and 'hora' in dados_atualizacao:
             try:
                 data_hora_str = f"{dados_atualizacao['data']} {dados_atualizacao['hora']}:00"
@@ -319,12 +303,10 @@ async def atualizar_agendamento(
                 del dados_atualizacao['hora']
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=f"Formato de data/hora inválido: {str(e)}")
-        
-        # Mapear campos do schema para o modelo
+               
         if 'descricao' in dados_atualizacao:
             dados_atualizacao['observacoes'] = dados_atualizacao.pop('descricao')
         
-        # Atualizar participantes se fornecidos
         if 'participantes_ids' in dados_atualizacao:
             participantes_ids = dados_atualizacao.pop('participantes_ids')
             if participantes_ids:
@@ -333,7 +315,6 @@ async def atualizar_agendamento(
                 ).all()
                 db_agendamento.participantes = participantes
         
-        # Atualizar demais campos
         for campo, valor in dados_atualizacao.items():
             if hasattr(db_agendamento, campo):
                 setattr(db_agendamento, campo, valor)
@@ -448,20 +429,16 @@ async def obter_estatisticas_agendamentos(db: Session = Depends(get_db)):
         print(f"❌ Erro ao buscar estatísticas: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao buscar estatísticas: {str(e)}")
 
-# Manter seu endpoint de teste existente
 @router.get("/test/database")
 async def test_database(db: Session = Depends(get_db)):
     """
     Endpoint de teste para verificar se o banco está funcionando
     """
     try:
-        # Teste 1: Contar agendamentos
         count_agendamentos = db.query(models.Agendamento).count()
         
-        # Teste 2: Contar cadastros  
         count_cadastros = db.query(models.Cadastro).count()
         
-        # Teste 3: Verificar tabelas
         result = db.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall() if "sqlite" in str(db.bind.url) else []
         
         return {

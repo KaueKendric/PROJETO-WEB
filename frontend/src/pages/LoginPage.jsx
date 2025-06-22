@@ -18,7 +18,6 @@ function LoginPage({ onLogin }) {
   useEffect(() => {
     setMounted(true);
 
-    // Efeito de movimento do mouse
     const handleMouseMove = (e) => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
@@ -49,7 +48,7 @@ function LoginPage({ onLogin }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: username,   // 🔥 CORRETO
+          email: username,  
           password: password
         })
       });
@@ -60,7 +59,6 @@ function LoginPage({ onLogin }) {
       if (response) {
         console.log('✅ Login bem-sucedido:', data);
 
-        // Salvar token no localStorage (opcional)
         localStorage.setItem('token', data.token);
 
         onLogin(true);
@@ -79,7 +77,6 @@ function LoginPage({ onLogin }) {
   };
 
 
-  // Criar partículas flutuantes
   const createParticles = () => {
     return Array.from({ length: 6 }, (_, i) => (
       <div
@@ -336,7 +333,7 @@ function LoginPage({ onLogin }) {
               </button>
             </form>
 
-            {/* Separador artístico */}
+            {/* Separador*/}
             <div className="my-10 flex items-center">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-white/10"></div>
               <div className="px-6 text-purple-200/50 text-sm bg-white/5 rounded-full py-2 border border-white/10 backdrop-blur-sm">
@@ -345,7 +342,7 @@ function LoginPage({ onLogin }) {
               <div className="flex-1 h-px bg-gradient-to-r from-white/10 via-white/20 to-transparent"></div>
             </div>
 
-            {/* Contatos de suporte ultra premium */}
+            {/* Contatos de suporte */}
             <div className="flex justify-center space-x-6">
               <button className="group flex items-center gap-3 text-purple-200/70 hover:text-white transition-all duration-300 p-4 rounded-2xl hover:bg-white/5 backdrop-blur-sm">
                 <div className="relative w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-300 overflow-hidden">
@@ -365,7 +362,7 @@ function LoginPage({ onLogin }) {
           </div>
         </div>
 
-        {/* Footer premium */}
+        {/* Footer*/}
         <div className="mt-10 text-center">
           <p className="text-purple-200/50 text-sm mb-2 font-medium tracking-wide">
             Sistema Integrado de Gestão
@@ -376,7 +373,7 @@ function LoginPage({ onLogin }) {
         </div>
       </div>
 
-      {/* Elementos decorativos extras premium */}
+      {/* Elementos decorativos*/}
       <div className="absolute top-20 left-20 w-3 h-3 bg-purple-400/20 rounded-full animate-ping"></div>
       <div className="absolute bottom-32 right-24 w-2 h-2 bg-pink-400/30 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
       <div className="absolute top-1/3 right-16 w-2 h-2 bg-blue-400/20 rounded-full animate-ping" style={{ animationDelay: '2s' }}></div>

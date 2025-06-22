@@ -14,7 +14,6 @@ function DashboardPage({ onLogout }) {
 
     const API_URL = import.meta.env.VITE_API_URL;
 
-    // Atualizar hora
     useEffect(() => {
         const timer = setInterval(() => {
             setCurrentTime(new Date());
@@ -23,7 +22,6 @@ function DashboardPage({ onLogout }) {
         return () => clearInterval(timer);
     }, []);
 
-    // Saudação
     useEffect(() => {
         const hour = currentTime.getHours();
         if (hour < 12) {
@@ -35,7 +33,6 @@ function DashboardPage({ onLogout }) {
         }
     }, [currentTime]);
 
-    // Fetch dados dashboard
     useEffect(() => {
         const fetchDadosDashboard = async () => {
             try {

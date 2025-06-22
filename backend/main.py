@@ -4,17 +4,14 @@ from sqlalchemy.orm import Session
 import uvicorn
 from datetime import datetime
 
-# IMPORTAÇÕES DO SISTEMA
 from backend.database.database import get_db, engine
 from backend.database import models
 from backend.utils import auth
 from backend.utils.email import enviar_email_background
 from backend.routers import agendamento, cadastro, funcionario, login, dashboard
 
-# ✅ Criação das tabelas no banco
 models.Base.metadata.create_all(bind=engine)
 
-# ✅ Instância da aplicação FastAPI
 app = FastAPI(
     title="Sistema de Agendamentos",
     description="API para gerenciamento de cadastros, agendamentos e dashboard",
@@ -23,7 +20,6 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# ✅ Configuração de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,14 +28,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Inclusão dos routers (organizado e sem duplicação)
-app.include_router(agendamento.router, prefix="/api")  # Para usar /api/agendamentos/
+app.include_router(agendamento.router, prefix="/api") 
 app.include_router(cadastro.router, prefix="/api")
 app.include_router(funcionario.router, prefix="/api")
 app.include_router(login.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 
-# ✅ Rota principal
 @app.get("/")
 async def root():
     return {
@@ -56,7 +50,6 @@ async def root():
         }
     }
 
-# ✅ Health check endpoint
 @app.get("/health")
 async def health_check():
     return {
@@ -65,13 +58,11 @@ async def health_check():
         "version": "1.0.0"
     }
 
-# ✅ Nova rota para /login/ que chama a função de login do router /auth
 @app.post("/login/", response_model=login.LoginResponse)
 async def login_sem_auth(login_data: login.LoginRequest):
     return await login.login(login_data)
 
 
-# ✅ Listagem de funcionários (mantido para compatibilidade)
 @app.get("/funcionarios/")
 async def listar_funcionarios(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     try:
@@ -79,11 +70,6 @@ async def listar_funcionarios(skip: int = 0, limit: int = 100, db: Session = Dep
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ⚠️ REMOVIDO: Rotas duplicadas de agendamento
-# As rotas de agendamento agora estão todas centralizadas no router /api/agendamentos/
-# Removidas as rotas duplicadas que estavam causando conflito
-
-# ✅ Eventos de startup e shutdown
 @app.on_event("startup")
 async def startup_event():
     print("🚀 Sistema de Agendamentos iniciado!")
@@ -94,13 +80,11 @@ async def startup_event():
 async def shutdown_event():
     print("🛑 Sistema de Agendamentos encerrado")
 
-# ✅ Handler global para erros
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     print(f"❌ Erro global: {str(exc)}")
     return HTTPException(status_code=500, detail="Erro interno do servidor")
 
-# ✅ Execução da aplicação
 if __name__ == "__main__":
     uvicorn.run(
         "main:app", 

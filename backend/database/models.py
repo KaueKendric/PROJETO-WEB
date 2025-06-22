@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from backend.database.database import Base
 
-# Tabela associativa para relação many-to-many entre Agendamentos e Cadastros
 agendamento_participantes = Table(
     'agendamento_participantes',
     Base.metadata,
@@ -21,7 +20,6 @@ class Cadastro(Base):
     endereco = Column(String(500))
     data_criacao = Column(DateTime, default=func.now())
 
-    # Relacionamentos
     agendamentos = relationship("Agendamento", back_populates="cadastro")
     
     agendamentos_participando = relationship(
@@ -44,7 +42,6 @@ class Funcionario(Base):
     data_criacao = Column(DateTime, default=func.now())
     data_atualizacao = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    # Relacionamentos
     agendamentos = relationship("Agendamento", back_populates="funcionario")
 
 class Agendamento(Base):
@@ -63,11 +60,9 @@ class Agendamento(Base):
     data_criacao = Column(DateTime, default=func.now())
     data_atualizacao = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    # Relacionamentos
     cadastro = relationship("Cadastro", back_populates="agendamentos")
     funcionario = relationship("Funcionario", back_populates="agendamentos")
     
-    # Relacionamento many-to-many com participantes
     participantes = relationship(
         "Cadastro", 
         secondary=agendamento_participantes,
@@ -107,10 +102,10 @@ class Agendamento(Base):
     def status_cor(self):
         """Retorna cor baseada no status"""
         cores = {
-            'agendado': '#3B82F6',      # Azul
-            'confirmado': '#10B981',    # Verde
-            'cancelado': '#EF4444',     # Vermelho
-            'realizado': '#8B5CF6',     # Roxo
-            'adiado': '#F59E0B'         # Amarelo
+            'agendado': '#3B82F6',     
+            'confirmado': '#10B981',   
+            'cancelado': '#EF4444',     
+            'realizado': '#8B5CF6',     
+            'adiado': '#F59E0B'         
         }
-        return cores.get(self.status, '#6B7280')  # Cinza padrão
+        return cores.get(self.status, '#6B7280') 

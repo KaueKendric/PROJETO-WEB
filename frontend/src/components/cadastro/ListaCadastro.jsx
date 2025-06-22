@@ -9,27 +9,22 @@ function ListaCadastro() {
   const [cadastroSelecionado, setCadastroSelecionado] = useState(null);
   const [filtro, setFiltro] = useState('');
 
-  // Estados para paginação
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totalCadastros, setTotalCadastros] = useState(0);
   const [carregandoPagina, setCarregandoPagina] = useState(false);
   const limitePorPagina = 6;
 
-  // Função para formatar data no formato brasileiro
   const formatarData = (data) => {
     if (!data) return '';
 
-    // Se já está no formato ISO (YYYY-MM-DD)
     if (data.includes('-')) {
       const [ano, mes, dia] = data.split('-');
       return `${dia}/${mes}/${ano}`;
     }
 
-    // Se está no formato brasileiro (DD/MM/YYYY)
     return data;
   };
 
-  // Função para buscar cadastros com paginação
   const fetchCadastros = async (pagina = 1, filtroAtual = filtro) => {
     try {
       console.log(`👥 Buscando cadastros - Página ${pagina}, Filtro: "${filtroAtual}"`);
@@ -40,7 +35,6 @@ function ListaCadastro() {
 
       let url = `/api/cadastros/?limit=${limitePorPagina}&skip=${skip}`;
 
-      // Adicionar filtro à URL se não estiver vazio
       if (filtroAtual.trim()) {
         url += `&filtro=${encodeURIComponent(filtroAtual.trim())}`;
       }
@@ -59,12 +53,11 @@ function ListaCadastro() {
       const data = response;
       console.log('✅ Cadastros recebidos:', data);
 
-      // Verificar se a resposta tem o formato esperado
       if (data.cadastros && typeof data.total === 'number') {
         setCadastros(data.cadastros);
         setTotalCadastros(data.total);
       } else {
-        // Fallback para resposta simples (array) - compatibilidade
+
         setCadastros(Array.isArray(data) ? data : []);
         setTotalCadastros(Array.isArray(data) ? data.length : 0);
       }
@@ -78,23 +71,20 @@ function ListaCadastro() {
     }
   };
 
-  // Carregar cadastros na inicialização
   useEffect(() => {
     setCarregando(true);
     fetchCadastros(1, filtro);
   }, []);
 
-  // Recarregar quando filtro mudar (com debounce)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setPaginaAtual(1);
       fetchCadastros(1, filtro);
-    }, 500); // 500ms de delay para evitar muitas requisições
+    }, 500); 
 
     return () => clearTimeout(timeoutId);
   }, [filtro]);
 
-  // Mudar página
   const mudarPagina = (novaPagina) => {
     if (novaPagina >= 1 && novaPagina <= totalPaginas) {
       setPaginaAtual(novaPagina);
@@ -102,10 +92,8 @@ function ListaCadastro() {
     }
   };
 
-  // Calcular total de páginas
   const totalPaginas = Math.ceil(totalCadastros / limitePorPagina);
 
-  // Gerar números das páginas para navegação
   const obterNumerosPaginas = () => {
     const numeros = [];
     const maxVisivel = 5;

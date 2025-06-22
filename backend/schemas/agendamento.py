@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field
 from datetime import datetime, date, time
 from typing import Optional, List, Dict, Any
 
-# Schema para receber dados do frontend (mantido do seu código)
 class AgendamentoCreate(BaseModel):
     titulo: str = Field(..., min_length=1, max_length=255, description="Título do agendamento")
     data: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$", description="Data no formato YYYY-MM-DD")
@@ -13,7 +12,6 @@ class AgendamentoCreate(BaseModel):
     tipo_sessao: Optional[str] = Field(default="reuniao", description="Tipo da sessão")
     duracao_em_minutos: Optional[int] = Field(default=60, ge=1, le=1440, description="Duração em minutos")
 
-# Schema para participante (usado na resposta) - mantido do seu código
 class ParticipanteResponse(BaseModel):
     id: int
     nome: str
@@ -23,7 +21,6 @@ class ParticipanteResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Schema de resposta completo (mantido do seu código)
 class AgendamentoResponse(BaseModel):
     id: int
     titulo: str
@@ -41,7 +38,6 @@ class AgendamentoResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Schema para listar (mais simples) - mantido do seu código
 class AgendamentoList(BaseModel):
     id: int
     titulo: str
@@ -54,7 +50,6 @@ class AgendamentoList(BaseModel):
     class Config:
         from_attributes = True
 
-# Schema para atualização (mantido do seu código)
 class AgendamentoUpdate(BaseModel):
     titulo: Optional[str] = Field(None, min_length=1, max_length=255)
     data: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
@@ -66,7 +61,6 @@ class AgendamentoUpdate(BaseModel):
     duracao_em_minutos: Optional[int] = Field(None, ge=1, le=1440)
     status: Optional[str] = None
 
-# ✅ NOVO: Schema para resposta paginada
 class AgendamentoPaginado(BaseModel):
     """Schema para resposta paginada de agendamentos"""
     agendamentos: List[Dict[str, Any]] = Field(..., description="Lista de agendamentos")
@@ -111,7 +105,6 @@ class AgendamentoPaginado(BaseModel):
             }
         }
 
-# ✅ NOVO: Schema para estatísticas de agendamentos
 class AgendamentoStats(BaseModel):
     """Schema para estatísticas de agendamentos"""
     total: int = Field(..., description="Total de agendamentos")
@@ -139,7 +132,6 @@ class AgendamentoStats(BaseModel):
             }
         }
 
-# ✅ NOVO: Enum para tipos de filtro
 from enum import Enum
 
 class FiltroAgendamento(str, Enum):
@@ -156,7 +148,6 @@ class FiltroAgendamento(str, Enum):
     REALIZADO = "realizado"
     CANCELADO = "cancelado"
 
-# ✅ NOVO: Schema para resposta de operações simples
 class OperacaoResponse(BaseModel):
     """Schema para respostas de operações simples"""
     message: str

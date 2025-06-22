@@ -22,8 +22,6 @@ function CriarAgendamento() {
   const inputParticipanteRef = useRef(null);
   const listaParticipantesRef = useRef(null);
 
-  
-  // Opções de tipo de agendamento
   const tiposAgendamento = [
     { value: 'reuniao', label: 'Reunião', icon: '👥' },
     { value: 'consulta', label: 'Consulta', icon: '🩺' },
@@ -31,7 +29,6 @@ function CriarAgendamento() {
     { value: 'outros', label: 'Outros', icon: '📋' }
   ];
 
-  // Buscar cadastros do backend
   useEffect(() => {
     const fetchCadastros = async () => {
       try {
@@ -54,7 +51,6 @@ function CriarAgendamento() {
     fetchCadastros();
   }, []);
 
-  // Fechar lista ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (listaParticipantesRef.current && !listaParticipantesRef.current.contains(event.target)) {
@@ -66,7 +62,6 @@ function CriarAgendamento() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filtrar cadastros para busca de participantes
   const cadastrosFiltrados = cadastros.filter(cadastro =>
     !agendamento.participantes.some(p => p.id === cadastro.id) &&
     (cadastro.nome.toLowerCase().includes(buscaParticipante.toLowerCase()) ||
@@ -151,7 +146,6 @@ function CriarAgendamento() {
 
       setMensagem({ tipo: 'sucesso', texto: 'Agendamento criado com sucesso!' });
 
-      // Limpar formulário
       setAgendamento({
         titulo: '',
         data: '',
