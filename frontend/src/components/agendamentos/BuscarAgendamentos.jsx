@@ -256,6 +256,7 @@ function BuscarAgendamento() {
         </div>
 
         <p className="text-white/50 text-sm mt-3 ml-1">
+          💡 Dica: Digite um número para buscar por ID ou texto para busca geral (máximo 50 resultados)
         </p>
       </div>
 
