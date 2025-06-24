@@ -182,7 +182,7 @@ function CriarCadastro() {
             className="py-3 px-6 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-colors"
           >
             {carregando ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white !animate-spin"></div>
             ) : (
               <UserPlus size={20} />
             )}

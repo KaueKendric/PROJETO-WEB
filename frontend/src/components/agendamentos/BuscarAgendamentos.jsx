@@ -245,7 +245,7 @@ function BuscarAgendamento() {
 
               <div className="relative flex items-center gap-3">
                 {carregando ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white !animate-spin"></div>
                 ) : (
                   <Search size={20} />
                 )}

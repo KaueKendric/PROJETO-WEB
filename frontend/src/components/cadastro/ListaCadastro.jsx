@@ -169,7 +169,7 @@ function ListaCadastro() {
 
       {carregando ? (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-purple-400/30 border-t-purple-400 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-purple-400/30 border-t-purple-400 mx-auto mb-4 !animate-spin"></div>
           <p className="text-white/70">Carregando cadastros...</p>
         </div>
       ) : cadastros.length > 0 ? (

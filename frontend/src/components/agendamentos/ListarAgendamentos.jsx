@@ -221,7 +221,7 @@ function ListaAgendamento() {
       
       {carregando ? (
         <div className="text-center py-10">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto border-green-500"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto border-green-500 !animate-spin"></div>
           <p className="mt-3 text-slate-400">Carregando agendamentos...</p>
         </div>
       ) : agendamentos.length > 0 ? (
