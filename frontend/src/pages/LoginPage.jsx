@@ -368,7 +368,7 @@ function LoginPage({ onLogin }) {
             Sistema Integrado de Gestão
           </p>
           <p className="text-purple-300/30 text-xs tracking-wider">
-            © 2024 - Todos os direitos reservados
+            © 2025 - Todos os direitos reservados
           </p>
         </div>
       </div>
