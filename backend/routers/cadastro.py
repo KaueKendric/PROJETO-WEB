@@ -15,7 +15,6 @@ router = APIRouter(
 
 from pydantic import BaseModel
 
-
 class CadastroPaginado(BaseModel):
     cadastros: List[Dict[str, Any]]
     total: int
@@ -27,15 +26,113 @@ class CadastroPaginado(BaseModel):
     temProxima: bool
     temAnterior: bool
 
-@router.get("/")
+@router.get("/", response_model=CadastroPaginado)
 async def listar_cadastros(
+    limit: int = Query(6, ge=1, le=50, description="Número de itens por página"),
+    skip: int = Query(0, ge=0, description="Número de itens para pular"),
+    filtro: str = Query("", description="Filtro de busca por nome, email ou telefone"),
+    db: Session = Depends(get_db)
+):
+    """
+    Listar cadastros com paginação e filtros
+    """
+    try:
+        pagina = (skip // limit) + 1
+        print(f"👥 Buscando cadastros - Página: {pagina}, Limit: {limit}, Skip: {skip}, Filtro: '{filtro}'")
+        
+        # Query base
+        query = db.query(models.Cadastro)
+        count_query = db.query(func.count(models.Cadastro.id))
+        
+        # Aplicar filtro se fornecido
+        if filtro and filtro.strip():
+            filtro = filtro.strip()
+            filtro_condicao = or_(
+                models.Cadastro.nome.ilike(f"%{filtro}%"),
+                models.Cadastro.email.ilike(f"%{filtro}%"),
+                models.Cadastro.telefone.ilike(f"%{filtro}%")
+            )
+            query = query.filter(filtro_condicao)
+            count_query = count_query.filter(filtro_condicao)
+        
+        # Contar total
+        total = count_query.scalar()
+        
+        # Buscar cadastros com paginação
+        cadastros = (
+            query
+            .order_by(models.Cadastro.data_criacao.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        
+        # Processar cadastros para JSON
+        cadastros_processados = []
+        for cadastro in cadastros:
+            try:
+                cadastro_dict = {
+                    "id": cadastro.id,
+                    "nome": cadastro.nome,
+                    "email": cadastro.email,
+                    "telefone": cadastro.telefone,
+                    "data_nascimento": cadastro.data_nascimento.isoformat() if cadastro.data_nascimento else None,
+                    "endereco": getattr(cadastro, 'endereco', None),
+                    "data_criacao": cadastro.data_criacao.isoformat() if hasattr(cadastro, 'data_criacao') and cadastro.data_criacao else None,
+                    "data_atualizacao": getattr(cadastro, 'data_atualizacao', None)
+                }
+                if cadastro_dict["data_atualizacao"]:
+                    cadastro_dict["data_atualizacao"] = cadastro_dict["data_atualizacao"].isoformat()
+                
+                cadastros_processados.append(cadastro_dict)
+                
+            except Exception as e:
+                print(f"❌ Erro ao processar cadastro {cadastro.id}: {e}")
+                # Fallback com dados mínimos
+                cadastros_processados.append({
+                    "id": cadastro.id,
+                    "nome": getattr(cadastro, 'nome', 'Nome não disponível'),
+                    "email": getattr(cadastro, 'email', ''),
+                    "telefone": getattr(cadastro, 'telefone', ''),
+                    "data_nascimento": None,
+                    "endereco": None,
+                    "data_criacao": None,
+                    "data_atualizacao": None,
+                    "error": f"Erro ao processar: {str(e)}"
+                })
+        
+        total_paginas = (total + limit - 1) // limit if total > 0 else 1
+        
+        print(f"✅ Retornando {len(cadastros_processados)} cadastros de {total} total")
+        
+        return CadastroPaginado(
+            cadastros=cadastros_processados,
+            total=total,
+            pagina=pagina,
+            totalPaginas=total_paginas,
+            limit=limit,
+            skip=skip,
+            filtro=filtro,
+            temProxima=pagina < total_paginas,
+            temAnterior=pagina > 1
+        )
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar cadastros: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar cadastros: {str(e)}")
+
+# Manter o endpoint antigo para compatibilidade (opcional)
+@router.get("/simples")
+async def listar_cadastros_simples(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
+    """Endpoint simples para compatibilidade"""
     try:
         return db.query(models.Cadastro).offset(skip).limit(limit).all()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/{cadastro_id}")
 async def obter_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
@@ -49,12 +146,10 @@ async def obter_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.post("/", response_model=cadastro_schema.Cadastro, status_code=201)
 async def criar_cadastro(
     cadastro: cadastro_schema.Cadastro, db: Session = Depends(get_db)
 ):
-
     try:
         print(f"📝 Criando cadastro: {cadastro.nome}")
 
@@ -71,14 +166,12 @@ async def criar_cadastro(
         print(f"❌ Erro ao criar cadastro: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao criar cadastro: {str(e)}")
 
-
 @router.put("/{cadastro_id}", response_model=cadastro_schema.Cadastro)
 async def atualizar_cadastro(
     cadastro_id: int,
     cadastro_data: cadastro_schema.Cadastro,
     db: Session = Depends(get_db),
 ):
-
     try:
         db_cadastro = (
             db.query(models.Cadastro).filter(models.Cadastro.id == cadastro_id).first()
@@ -109,10 +202,8 @@ async def atualizar_cadastro(
             status_code=500, detail=f"Erro ao atualizar cadastro: {str(e)}"
         )
 
-
 @router.delete("/{cadastro_id}")
 async def excluir_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
-
     try:
         db_cadastro = (
             db.query(models.Cadastro).filter(models.Cadastro.id == cadastro_id).first()
@@ -137,10 +228,8 @@ async def excluir_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
             status_code=500, detail=f"Erro ao excluir cadastro: {str(e)}"
         )
 
-
 @router.get("/stats/resumo")
 async def obter_estatisticas_cadastros(db: Session = Depends(get_db)):
- 
     try:
         from datetime import datetime, timedelta
 
@@ -195,7 +284,6 @@ async def buscar_cadastros_avancada(
     limit: int = 100,
     db: Session = Depends(get_db),
 ):
-
     try:
         query = db.query(models.Cadastro)
 
@@ -220,7 +308,6 @@ async def buscar_cadastros_avancada(
         print(f"❌ Erro na busca avançada: {e}")
         raise HTTPException(status_code=500, detail=f"Erro na busca: {str(e)}")
 
-
 # Endpoint de teste
 @router.get("/test/database")
 async def test_database_cadastros(db: Session = Depends(get_db)):
@@ -242,12 +329,12 @@ async def test_database_cadastros(db: Session = Depends(get_db)):
                 if cadastro_exemplo
                 else None
             ),
-            "test_timestamp": datetime.now().isoformat(),
+            "test_timestamp": datetime.datetime.now().isoformat(),
         }
 
     except Exception as e:
         return {
             "database_status": "error",
             "error": str(e),
-            "test_timestamp": datetime.now().isoformat(),
+            "test_timestamp": datetime.datetime.now().isoformat(),
         }

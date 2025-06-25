@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Users, FileText, AlertCircle, Edit2, Trash2, Eye, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import fetchApi from '../../utils/fetchApi';
 
@@ -13,6 +13,43 @@ function ListaAgendamento() {
   const [totalAgendamentos, setTotalAgendamentos] = useState(0);
   const [carregandoPagina, setCarregandoPagina] = useState(false);
   const limitePorPagina = 6;
+
+  // Adicionar estilos CSS para line-clamp e padronização
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .agendamento-card {
+        height: 420px;
+        display: flex;
+        flex-direction: column;
+      }
+      .agendamento-header {
+        min-height: 80px;
+        max-height: 80px;
+      }
+      .agendamento-content {
+        flex: 1;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+      }
+      .agendamento-footer {
+        margin-top: auto;
+        min-height: 60px;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   const tiposFiltro = [
     { value: 'todos', label: 'Todos' },
@@ -80,7 +117,6 @@ function ListaAgendamento() {
     }
   };
 
- 
   const fetchAgendamentos = async (pagina = 1, filtroAtual = filtro) => {
     try {
       console.log(`📅 Buscando agendamentos - Página ${pagina}, Filtro: ${filtroAtual}`);
@@ -96,25 +132,22 @@ function ListaAgendamento() {
       
       const response = await fetchApi(url);
       
-      console.log('📡 Resposta recebida:', response.status, response.statusText);
-      
       if (!response) {
-        const errorText = await response.text();
-        console.error('❌ Erro na resposta:', errorText);
-        throw new Error(`Erro ${response.status}: ${response.statusText} - ${errorText}`);
+        throw new Error('Erro ao buscar agendamentos');
       }
       
       const data = response;
       console.log('✅ Agendamentos recebidos:', data);
       
-
       if (data.agendamentos && typeof data.total === 'number') {
         setAgendamentos(data.agendamentos);
         setTotalAgendamentos(data.total);
-      } else {
-
+      } else if (Array.isArray(data)) {
         setAgendamentos(data);
         setTotalAgendamentos(data.length);
+      } else {
+        setAgendamentos([]);
+        setTotalAgendamentos(0);
       }
       
     } catch (error) {
@@ -221,7 +254,7 @@ function ListaAgendamento() {
       
       {carregando ? (
         <div className="text-center py-10">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto border-green-500 !animate-spin"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto border-green-500"></div>
           <p className="mt-3 text-slate-400">Carregando agendamentos...</p>
         </div>
       ) : agendamentos.length > 0 ? (
@@ -239,16 +272,17 @@ function ListaAgendamento() {
             )}
           </div>
           
-          {/* Grid de agendamentos */}
+          {/* Grid de agendamentos - Padronizado */}
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
             {agendamentos.map((agendamento) => (
               <div
                 key={agendamento.id}
-                className="bg-slate-900 rounded-lg p-5 border border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-lg"
+                className="agendamento-card bg-slate-900 rounded-lg p-5 border border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-lg"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg text-white mb-1">
+                {/* Header com altura fixa */}
+                <div className="agendamento-header flex items-start justify-between mb-4">
+                  <div className="flex-1 pr-3">
+                    <h3 className="font-bold text-lg text-white mb-2 leading-tight line-clamp-2" title={agendamento.titulo}>
                       {agendamento.titulo}
                     </h3>
                     <span 
@@ -258,12 +292,13 @@ function ListaAgendamento() {
                       {getTipoLabel(agendamento.tipo_sessao)}
                     </span>
                   </div>
-                  <span className="text-sm text-slate-500">
+                  <span className="text-xs text-slate-500 whitespace-nowrap">
                     ID: {agendamento.id}
                   </span>
                 </div>
                 
-                <div className="space-y-3">
+                {/* Conteúdo com altura flexível */}
+                <div className="agendamento-content space-y-3">
                   <div className="flex items-center gap-2 text-slate-300">
                     <Calendar size={16} className="text-blue-400 flex-shrink-0" />
                     <span className="text-sm">
@@ -283,36 +318,30 @@ function ListaAgendamento() {
                     </span>
                   </div>
                   
-                  {agendamento.local && (
-                    <div className="flex items-center gap-2 text-slate-300">
-                      <MapPin size={16} className="text-red-400 flex-shrink-0" />
-                      <span className="text-sm truncate" title={agendamento.local}>
-                        {agendamento.local}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <MapPin size={16} className="text-red-400 flex-shrink-0" />
+                    <span className="text-sm truncate" title={agendamento.local || 'Local não informado'}>
+                      {agendamento.local || 'Local não informado'}
+                    </span>
+                  </div>
                   
-                  {agendamento.participantes && agendamento.participantes.length > 0 && (
-                    <div className="flex items-center gap-2 text-slate-300">
-                      <Users size={16} className="text-purple-400 flex-shrink-0" />
-                      <span className="text-sm truncate" title={formatarParticipantes(agendamento.participantes)}>
-                        {formatarParticipantes(agendamento.participantes)}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Users size={16} className="text-purple-400 flex-shrink-0" />
+                    <span className="text-sm truncate" title={formatarParticipantes(agendamento.participantes)}>
+                      {formatarParticipantes(agendamento.participantes)}
+                    </span>
+                  </div>
                   
-                  {agendamento.observacoes && (
-                    <div className="flex items-start gap-2 text-slate-300">
-                      <FileText size={16} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm line-clamp-2">
-                        {agendamento.observacoes}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-start gap-2 text-slate-300">
+                    <FileText size={16} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm line-clamp-2 leading-tight" title={agendamento.observacoes || 'Sem observações'}>
+                      {agendamento.observacoes || 'Sem observações'}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Botões de ação */}
-                <div className="flex gap-2 mt-4 pt-4 border-t border-slate-700">
+                {/* Footer com altura fixa */}
+                <div className="agendamento-footer flex gap-2 pt-4 border-t border-slate-700">
                   <button
                     onClick={() => setAgendamentoSelecionado(agendamento)}
                     className="flex-1 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"

@@ -9,7 +9,8 @@ function CriarAgendamento() {
     hora: '',
     local: '',
     descricao: '',
-    participantes: []
+    participantes: [],
+    tipo: 'reuniao' 
   });
 
   const [cadastros, setCadastros] = useState([]);
@@ -32,17 +33,39 @@ function CriarAgendamento() {
   useEffect(() => {
     const fetchCadastros = async () => {
       try {
-        const response = await fetchApi('/api/cadastros');
-        console.log("Cadastro",response)
+        console.log('🔍 Buscando cadastros para participantes...');
+        
+        const response = await fetchApi('/api/cadastros/?limit=50&skip=0');
+        console.log("Resposta da API cadastros:", response);
+        
         if (!response) {
-          
           throw new Error('Erro ao buscar cadastros');
         }
-        const data = response;
-        setCadastros(data);
+        
+        if (response.cadastros && Array.isArray(response.cadastros)) {
+          console.log('✅ Estrutura nova detectada:', response.cadastros.length, 'cadastros');
+          setCadastros(response.cadastros);
+        } 
+        else if (Array.isArray(response)) {
+          console.log('✅ Estrutura antiga detectada:', response.length, 'cadastros');
+          setCadastros(response);
+        } 
+        else {
+          console.error('❌ Estrutura de resposta inesperada:', response);
+          setCadastros([]);
+          setMensagem({ 
+            tipo: 'erro', 
+            texto: 'Formato de resposta inesperado da API de cadastros' 
+          });
+        }
+        
       } catch (error) {
-        console.error('Erro ao buscar cadastros:', error);
-        setMensagem({ tipo: 'erro', texto: 'Erro ao carregar lista de pessoas cadastradas' });
+        console.error('❌ Erro ao buscar cadastros:', error);
+        setMensagem({ 
+          tipo: 'erro', 
+          texto: 'Erro ao carregar lista de pessoas cadastradas: ' + error.message 
+        });
+        setCadastros([]);
       } finally {
         setCarregandoCadastros(false);
       }
@@ -62,11 +85,11 @@ function CriarAgendamento() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const cadastrosFiltrados = cadastros.filter(cadastro =>
+  const cadastrosFiltrados = Array.isArray(cadastros) ? cadastros.filter(cadastro =>
     !agendamento.participantes.some(p => p.id === cadastro.id) &&
     (cadastro.nome.toLowerCase().includes(buscaParticipante.toLowerCase()) ||
       cadastro.email.toLowerCase().includes(buscaParticipante.toLowerCase()))
-  );
+  ) : [];
 
   const handleInputChange = (campo, valor) => {
     setAgendamento(prev => ({
@@ -104,6 +127,10 @@ function CriarAgendamento() {
       setMensagem({ tipo: 'erro', texto: 'A hora é obrigatória' });
       return false;
     }
+    if (!agendamento.tipo) {
+      setMensagem({ tipo: 'erro', texto: 'O tipo de agendamento é obrigatório' });
+      return false;
+    }
     return true;
   };
 
@@ -134,15 +161,14 @@ function CriarAgendamento() {
         },
         body: JSON.stringify(dadosAgendamento)
       });
-      console.log("agendamentos", response)
+      
+      console.log("Resposta agendamentos:", response);
 
       if (!response) {
-        const errorData = response;
-        throw new Error(errorData.detail || 'Erro ao salvar agendamento');
+        throw new Error('Erro ao salvar agendamento - resposta vazia');
       }
 
-      const resultado = response;
-      console.log('✅ Agendamento criado:', resultado);
+      console.log('✅ Agendamento criado:', response);
 
       setMensagem({ tipo: 'sucesso', texto: 'Agendamento criado com sucesso!' });
 
@@ -152,7 +178,8 @@ function CriarAgendamento() {
         hora: '',
         local: '',
         descricao: '',
-        participantes: []
+        participantes: [],
+        tipo: 'reuniao'
       });
 
     } catch (error) {
@@ -206,7 +233,6 @@ function CriarAgendamento() {
         {/* Tipo de Agendamento */}
         <div>
           <label className="block text-white font-medium mb-2">
-            
             Tipo de Agendamento *
           </label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -279,6 +305,22 @@ function CriarAgendamento() {
             Participantes
           </label>
 
+          {/* Status dos cadastros */}
+          {carregandoCadastros && (
+            <div className="mb-3 p-3 bg-blue-500/20 border border-blue-400/30 rounded-xl text-blue-300 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-400/30 border-t-blue-400"></div>
+                Carregando lista de cadastros...
+              </div>
+            </div>
+          )}
+
+          {!carregandoCadastros && cadastros.length === 0 && (
+            <div className="mb-3 p-3 bg-yellow-500/20 border border-yellow-400/30 rounded-xl text-yellow-300 text-sm">
+              Nenhum cadastro encontrado. Cadastre pessoas primeiro na aba "Novo Cadastro".
+            </div>
+          )}
+
           {/* Busca de participantes */}
           <div className="relative" ref={listaParticipantesRef}>
             <div className="relative">
@@ -293,8 +335,8 @@ function CriarAgendamento() {
                 }}
                 onFocus={() => setMostrarListaParticipantes(true)}
                 placeholder={carregandoCadastros ? "Carregando cadastros..." : "Buscar pessoas para adicionar..."}
-                disabled={carregandoCadastros}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm"
+                disabled={carregandoCadastros || cadastros.length === 0}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm disabled:opacity-50"
               />
             </div>
 

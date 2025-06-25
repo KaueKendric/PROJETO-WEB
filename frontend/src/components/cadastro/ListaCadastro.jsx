@@ -39,32 +39,60 @@ function ListaCadastro() {
         url += `&filtro=${encodeURIComponent(filtroAtual.trim())}`;
       }
 
+      console.log(`🔗 URL da requisição: ${url}`);
 
       const response = await fetchApi(url);
 
-      console.log('📡 Resposta recebida:', response.status, response.statusText);
+      console.log('📡 Resposta recebida:', response);
 
+      // Verifica se a resposta é válida
       if (!response) {
-        const errorText = await response.text();
-        console.error('❌ Erro na resposta:', errorText);
-        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        throw new Error('Resposta vazia da API');
       }
 
-      const data = response;
-      console.log('✅ Cadastros recebidos:', data);
-
-      if (data.cadastros && typeof data.total === 'number') {
-        setCadastros(data.cadastros);
-        setTotalCadastros(data.total);
+      // Se response for um objeto Response (não processado ainda)
+      if (response.status !== undefined) {
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Erro na resposta:', errorText);
+          throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log('✅ Dados processados:', data);
+        
+        // Processa os dados conforme a estrutura da API
+        if (data.cadastros && typeof data.total === 'number') {
+          setCadastros(data.cadastros);
+          setTotalCadastros(data.total);
+        } else if (Array.isArray(data)) {
+          setCadastros(data);
+          setTotalCadastros(data.length);
+        } else {
+          setCadastros([]);
+          setTotalCadastros(0);
+        }
       } else {
+        // Se response já foi processado pelo fetchApi
+        const data = response;
+        console.log('✅ Cadastros recebidos:', data);
 
-        setCadastros(Array.isArray(data) ? data : []);
-        setTotalCadastros(Array.isArray(data) ? data.length : 0);
+        if (data.cadastros && typeof data.total === 'number') {
+          setCadastros(data.cadastros);
+          setTotalCadastros(data.total);
+        } else if (Array.isArray(data)) {
+          setCadastros(data);
+          setTotalCadastros(data.length);
+        } else {
+          setCadastros([]);
+          setTotalCadastros(0);
+        }
       }
 
     } catch (error) {
       console.error('❌ Erro ao buscar cadastros:', error);
       setErro('Erro ao buscar cadastros: ' + error.message);
+      setCadastros([]);
+      setTotalCadastros(0);
     } finally {
       setCarregando(false);
       setCarregandoPagina(false);
@@ -86,7 +114,8 @@ function ListaCadastro() {
   }, [filtro]);
 
   const mudarPagina = (novaPagina) => {
-    if (novaPagina >= 1 && novaPagina <= totalPaginas) {
+    if (novaPagina >= 1 && novaPagina <= totalPaginas && !carregandoPagina) {
+      console.log(`📄 Mudando para página ${novaPagina}`);
       setPaginaAtual(novaPagina);
       fetchCadastros(novaPagina, filtro);
     }
@@ -180,20 +209,26 @@ function ListaCadastro() {
               Mostrando {((paginaAtual - 1) * limitePorPagina) + 1} a {Math.min(paginaAtual * limitePorPagina, totalCadastros)} de {totalCadastros} cadastro(s)
               {filtro && <span className="text-purple-300"> • Filtro: "{filtro}"</span>}
             </p>
-            {carregandoPagina && (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-500"></div>
-                <span className="text-sm text-white/70">Carregando...</span>
-              </div>
-            )}
-            {filtro && (
-              <button
-                onClick={() => setFiltro('')}
-                className="text-purple-400 hover:text-white transition-colors text-sm"
-              >
-                Limpar filtro
-              </button>
-            )}
+            <div className="flex items-center gap-4">
+              {carregandoPagina && (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-500"></div>
+                  <span className="text-sm text-white/70">Carregando...</span>
+                </div>
+              )}
+              {filtro && (
+                <button
+                  onClick={() => setFiltro('')}
+                  className="text-purple-400 hover:text-white transition-colors text-sm"
+                >
+                  Limpar filtro
+                </button>
+              )}
+              {/* Debug info */}
+              <span className="text-xs text-white/40">
+                Página {paginaAtual} de {totalPaginas}
+              </span>
+            </div>
           </div>
 
           {/* Grid de cadastros */}
