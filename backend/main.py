@@ -72,17 +72,17 @@ async def listar_funcionarios(skip: int = 0, limit: int = 100, db: Session = Dep
 
 @app.on_event("startup")
 async def startup_event():
-    print("🚀 Sistema de Agendamentos iniciado!")
-    print(f"📖 Documentação disponível em: http://localhost:8000/docs")
-    print(f"🔗 API Agendamentos: http://localhost:8000/api/agendamentos/")
+    print("Sistema de Agendamentos iniciado!")
+    print(f"Documentação disponível em: http://localhost:8000/docs")
+    print(f"API Agendamentos: http://localhost:8000/api/agendamentos/")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    print("🛑 Sistema de Agendamentos encerrado")
+    print("Sistema de Agendamentos encerrado")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    print(f"❌ Erro global: {str(exc)}")
+    print(f"Erro global: {str(exc)}")
     return HTTPException(status_code=500, detail="Erro interno do servidor")
 
 if __name__ == "__main__":

@@ -1,0 +1,11 @@
+{
+  "name": "projeto-web",
+  "version": "1.0.0",
+  "description": "Monorepo com frontend e backend",
+  "scripts": {
+    "dev": "concurrently \"cd frontend && npm run dev\" \"bash start.sh\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
