@@ -40,7 +40,7 @@ async def listar_agendamentos(
     """
     try:
         pagina = (skip // limit) + 1
-        print(f"📅 Buscando agendamentos - Página: {pagina}, Limit: {limit}, Skip: {skip}, Filtro: {filtro}")
+        print(f"Buscando agendamentos - Página: {pagina}, Limit: {limit}, Skip: {skip}, Filtro: {filtro}")
         
         query = db.query(models.Agendamento).options(joinedload(models.Agendamento.participantes))
         count_query = db.query(func.count(models.Agendamento.id))
@@ -74,7 +74,7 @@ async def listar_agendamentos(
                         for p in agendamento.participantes
                     ]
                 except Exception as e:
-                    print(f"⚠️ Erro ao buscar participantes do agendamento {agendamento.id}: {e}")
+                    print(f"Erro ao buscar participantes do agendamento {agendamento.id}: {e}")
                     participantes = []
                 
                 agendamento_dict = {
@@ -96,7 +96,7 @@ async def listar_agendamentos(
                 agendamentos_processados.append(agendamento_dict)
                 
             except Exception as e:
-                print(f"❌ Erro ao processar agendamento {agendamento.id}: {e}")
+                print(f"Erro ao processar agendamento {agendamento.id}: {e}")
                 agendamentos_processados.append({
                     "id": agendamento.id,
                     "titulo": getattr(agendamento, 'titulo', 'Título não disponível'),
@@ -113,7 +113,7 @@ async def listar_agendamentos(
         
         total_paginas = (total + limit - 1) // limit 
         
-        print(f"✅ Retornando {len(agendamentos_processados)} agendamentos de {total} total")
+        print(f"Retornando {len(agendamentos_processados)} agendamentos de {total} total")
         
         return AgendamentoPaginado(
             agendamentos=agendamentos_processados,
@@ -128,7 +128,7 @@ async def listar_agendamentos(
         )
         
     except Exception as e:
-        print(f"❌ Erro ao buscar agendamentos: {e}")
+        print(f"Erro ao buscar agendamentos: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erro ao buscar agendamentos: {str(e)}")
@@ -178,7 +178,7 @@ def aplicar_filtros_agendamento(query, count_query, filtro: str):
 async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     
     try:
-        print(f"📝 Dados recebidos para criação: {agendamento_data.dict()}")
+        print(f"Dados recebidos para criação: {agendamento_data.dict()}")
         
        
         try:
@@ -202,7 +202,7 @@ async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCrea
         db.add(db_agendamento)
         db.flush()  
         
-        print(f"✅ Agendamento criado com ID: {db_agendamento.id}")
+        print(f"Agendamento criado com ID: {db_agendamento.id}")
         
        
         if agendamento_data.participantes_ids:
@@ -211,14 +211,14 @@ async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCrea
                     models.Cadastro.id.in_(agendamento_data.participantes_ids)
                 ).all()
                 
-                print(f"👥 Encontrados {len(participantes)} participantes para adicionar")
+                print(f"Encontrados {len(participantes)} participantes para adicionar")
                 
                 for participante in participantes:
                     db_agendamento.participantes.append(participante)
-                    print(f"✅ Participante {participante.nome} adicionado")
+                    print(f"Participante {participante.nome} adicionado")
                         
             except Exception as e:
-                print(f"⚠️ Erro ao adicionar participantes: {e}")
+                print(f"Erro ao adicionar participantes: {e}")
         
         db.commit()
         db.refresh(db_agendamento)
@@ -248,7 +248,7 @@ async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCrea
         raise
     except Exception as e:
         db.rollback()
-        print(f"❌ Erro ao criar agendamento: {e}")
+        print(f"Erro ao criar agendamento: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erro ao criar agendamento: {str(e)}")
@@ -259,7 +259,7 @@ async def obter_agendamento(agendamento_id: int, db: Session = Depends(get_db)):
     Obter um agendamento específico por ID - Mantendo sua lógica
     """
     try:
-        print(f"🔍 Buscando agendamento ID: {agendamento_id}")
+        print(f"Buscando agendamento ID: {agendamento_id}")
         
         db_agendamento = db.query(models.Agendamento).options(
             joinedload(models.Agendamento.participantes)
@@ -275,7 +275,7 @@ async def obter_agendamento(agendamento_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Erro ao buscar agendamento: {e}")
+        print(f"Erro ao buscar agendamento: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao buscar agendamento: {str(e)}")
 
 @router.put("/{agendamento_id}", response_model=agendamento_schema.AgendamentoResponse)
@@ -324,14 +324,14 @@ async def atualizar_agendamento(
         db.commit()
         db.refresh(db_agendamento)
         
-        print(f"✅ Agendamento {agendamento_id} atualizado com sucesso")
+        print(f"Agendamento {agendamento_id} atualizado com sucesso")
         return agendamento_schema.AgendamentoResponse.from_orm(db_agendamento)
         
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        print(f"❌ Erro ao atualizar agendamento {agendamento_id}: {e}")
+        print(f"Erro ao atualizar agendamento {agendamento_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao atualizar agendamento: {str(e)}")
 
 @router.delete("/{agendamento_id}")
@@ -351,14 +351,14 @@ async def excluir_agendamento(agendamento_id: int, db: Session = Depends(get_db)
         db.delete(db_agendamento)
         db.commit()
         
-        print(f"✅ Agendamento '{titulo}' excluído com sucesso")
+        print(f"Agendamento '{titulo}' excluído com sucesso")
         return {"message": "Agendamento excluído com sucesso", "id": agendamento_id}
         
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        print(f"❌ Erro ao excluir agendamento {agendamento_id}: {e}")
+        print(f"Erro ao excluir agendamento {agendamento_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao excluir agendamento: {str(e)}")
 
 @router.get("/stats/resumo")
@@ -370,6 +370,7 @@ async def obter_estatisticas_agendamentos(db: Session = Depends(get_db)):
         hoje = datetime.now().date()
         inicio_hoje = datetime.combine(hoje, datetime.min.time())
         fim_hoje = datetime.combine(hoje + timedelta(days=1), datetime.min.time())
+        
         
         dias_desde_domingo = hoje.weekday() + 1 if hoje.weekday() != 6 else 0
         inicio_semana = datetime.combine(hoje - timedelta(days=dias_desde_domingo), datetime.min.time())
@@ -426,7 +427,7 @@ async def obter_estatisticas_agendamentos(db: Session = Depends(get_db)):
         }
         
     except Exception as e:
-        print(f"❌ Erro ao buscar estatísticas: {e}")
+        print(f"Erro ao buscar estatísticas: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao buscar estatísticas: {str(e)}")
 
 @router.get("/test/database")

@@ -38,7 +38,7 @@ async def listar_cadastros(
     """
     try:
         pagina = (skip // limit) + 1
-        print(f"👥 Buscando cadastros - Página: {pagina}, Limit: {limit}, Skip: {skip}, Filtro: '{filtro}'")
+        print(f"Buscando cadastros - Página: {pagina}, Limit: {limit}, Skip: {skip}, Filtro: '{filtro}'")
         
         # Query base
         query = db.query(models.Cadastro)
@@ -87,7 +87,7 @@ async def listar_cadastros(
                 cadastros_processados.append(cadastro_dict)
                 
             except Exception as e:
-                print(f"❌ Erro ao processar cadastro {cadastro.id}: {e}")
+                print(f"Erro ao processar cadastro {cadastro.id}: {e}")
                 # Fallback com dados mínimos
                 cadastros_processados.append({
                     "id": cadastro.id,
@@ -103,7 +103,7 @@ async def listar_cadastros(
         
         total_paginas = (total + limit - 1) // limit if total > 0 else 1
         
-        print(f"✅ Retornando {len(cadastros_processados)} cadastros de {total} total")
+        print(f"Retornando {len(cadastros_processados)} cadastros de {total} total")
         
         return CadastroPaginado(
             cadastros=cadastros_processados,
@@ -118,7 +118,7 @@ async def listar_cadastros(
         )
         
     except Exception as e:
-        print(f"❌ Erro ao buscar cadastros: {e}")
+        print(f"Erro ao buscar cadastros: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erro ao buscar cadastros: {str(e)}")
@@ -158,12 +158,12 @@ async def criar_cadastro(
         db.commit()
         db.refresh(db_cadastro)
 
-        print(f"✅ Cadastro criado com ID: {db_cadastro.id}")
+        print(f"Cadastro criado com ID: {db_cadastro.id}")
         return db_cadastro
 
     except Exception as e:
         db.rollback()
-        print(f"❌ Erro ao criar cadastro: {e}")
+        print(f"Erro ao criar cadastro: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao criar cadastro: {str(e)}")
 
 @router.put("/{cadastro_id}", response_model=cadastro_schema.Cadastro)
@@ -190,14 +190,14 @@ async def atualizar_cadastro(
         db.commit()
         db.refresh(db_cadastro)
 
-        print(f"✅ Cadastro {cadastro_id} atualizado com sucesso")
+        print(f"Cadastro {cadastro_id} atualizado com sucesso")
         return db_cadastro
 
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        print(f"❌ Erro ao atualizar cadastro {cadastro_id}: {e}")
+        print(f"Erro ao atualizar cadastro {cadastro_id}: {e}")
         raise HTTPException(
             status_code=500, detail=f"Erro ao atualizar cadastro: {str(e)}"
         )
@@ -216,14 +216,14 @@ async def excluir_cadastro(cadastro_id: int, db: Session = Depends(get_db)):
         db.delete(db_cadastro)
         db.commit()
 
-        print(f"✅ Cadastro '{nome}' excluído com sucesso")
+        print(f"Cadastro '{nome}' excluído com sucesso")
         return {"message": "Cadastro excluído com sucesso", "id": cadastro_id}
 
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
-        print(f"❌ Erro ao excluir cadastro {cadastro_id}: {e}")
+        print(f"Erro ao excluir cadastro {cadastro_id}: {e}")
         raise HTTPException(
             status_code=500, detail=f"Erro ao excluir cadastro: {str(e)}"
         )
@@ -270,7 +270,7 @@ async def obter_estatisticas_cadastros(db: Session = Depends(get_db)):
         }
 
     except Exception as e:
-        print(f"❌ Erro ao buscar estatísticas: {e}")
+        print(f"Erro ao buscar estatísticas: {e}")
         raise HTTPException(
             status_code=500, detail=f"Erro ao buscar estatísticas: {str(e)}"
         )
@@ -305,7 +305,7 @@ async def buscar_cadastros_avancada(
         }
 
     except Exception as e:
-        print(f"❌ Erro na busca avançada: {e}")
+        print(f"Erro na busca avançada: {e}")
         raise HTTPException(status_code=500, detail=f"Erro na busca: {str(e)}")
 
 # Endpoint de teste
