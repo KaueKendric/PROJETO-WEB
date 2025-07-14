@@ -1,9 +1,8 @@
 import axios from 'axios';
 
-
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-    timeout: 5000, 
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+    timeout: 5000,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -28,7 +27,6 @@ api.interceptors.response.use(
     },
     (error) => {
         console.error('❌ Erro na resposta:', error.response?.data || error.message);
-        
         if (error.response?.status === 422) {
             console.error('❌ Erro de validação (422):', error.response.data);
         } else if (error.response?.status === 404) {
@@ -36,11 +34,9 @@ api.interceptors.response.use(
         } else if (error.response?.status >= 500) {
             console.error('❌ Erro interno do servidor (500+)');
         }
-        
         return Promise.reject(error);
     }
 );
-
 
 export default async function fetchApi(url, options = {}) {
     const {
@@ -55,122 +51,58 @@ export default async function fetchApi(url, options = {}) {
         const config = {
             url,
             method: method.toUpperCase(),
-            headers: {
-                ...headers
-            },
-            params, 
+            headers: { ...headers },
+            params,
             ...rest,
         };
 
-
         if (body) {
-            if (typeof body === 'string') {
-                try {
-                    config.data = JSON.parse(body);
-                // eslint-disable-next-line no-unused-vars
-                } catch (e) {
-                    config.data = body;
-                }
-            } else if (typeof body === 'object') {
-                config.data = body;
-            } else {
-                config.data = body;
-            }
+            config.data = typeof body === 'string' ? JSON.parse(body) : body;
         }
 
         const response = await api.request(config);
         return response.data;
-        
+
     } catch (error) {
-        const errorMessage = error.response?.data?.detail || 
-                           error.response?.data?.message || 
-                           error.message || 
-                           'Erro desconhecido na API';
-        
+        const errorMessage = error.response?.data?.detail ||
+            error.response?.data?.message ||
+            error.message ||
+            'Erro desconhecido na API';
+
         const apiError = new Error(errorMessage);
         apiError.status = error.response?.status;
         apiError.data = error.response?.data;
         apiError.originalError = error;
-        
+
         throw apiError;
     }
 }
 
-export const apiGet = async (url, params = {}) => {
-    return fetchApi(url, { method: 'GET', params });
-};
-
-export const apiPost = async (url, data = {}) => {
-    return fetchApi(url, { 
-        method: 'POST', 
-        body: typeof data === 'object' ? data : JSON.parse(data)
-    });
-};
-
-export const apiPut = async (url, data = {}) => {
-    return fetchApi(url, { 
-        method: 'PUT', 
-        body: typeof data === 'object' ? data : JSON.parse(data)
-    });
-};
-
-export const apiDelete = async (url) => {
-    return fetchApi(url, { method: 'DELETE' });
-};
+export const apiGet = async (url, params = {}) => fetchApi(url, { method: 'GET', params });
+export const apiPost = async (url, data = {}) => fetchApi(url, { method: 'POST', body: data });
+export const apiPut = async (url, data = {}) => fetchApi(url, { method: 'PUT', body: data });
+export const apiDelete = async (url) => fetchApi(url, { method: 'DELETE' });
 
 export const cadastrosApi = {
-
-    listar: (limit = 6, skip = 0, filtro = '') => {
-        return apiGet('/cadastros/', { limit, skip, filtro });
-    },
-    
-    buscarPorId: (id) => {
-        return apiGet(`/cadastros/${id}`);
-    },
-    
-
-    criar: (dados) => {
-        return apiPost('/cadastros/', dados);
-    },
-    
-    atualizar: (id, dados) => {
-        return apiPut(`/cadastros/${id}`, dados);
-    },
-    
-    excluir: (id) => {
-        return apiDelete(`/cadastros/${id}`);
-    },
-    
-
-    estatisticas: () => {
-        return apiGet('/cadastros/stats/resumo');
-    }
+    listar: (limit = 6, skip = 0, filtro = '') => apiGet('/api/cadastros/', { limit, skip, filtro }),
+    buscarPorId: (id) => apiGet(`/api/cadastros/${id}`),
+    criar: (dados) => apiPost('/api/cadastros/', dados),
+    atualizar: (id, dados) => apiPut(`/api/cadastros/${id}`, dados),
+    excluir: (id) => apiDelete(`/api/cadastros/${id}`),
+    estatisticas: () => apiGet('/api/cadastros/stats/resumo')
 };
 
 export const agendamentosApi = {
- 
-    listar: (limit = 6, skip = 0, filtro = 'todos') => {
-        return apiGet('/api/agendamentos/', { limit, skip, filtro });
-    },
-    
+    listar: (limit = 6, skip = 0, filtro = 'todos') => apiGet('/api/agendamentos/', { limit, skip, filtro }),
+    buscarPorId: (id) => apiGet(`/api/agendamentos/${id}`),
+    criar: (dados) => apiPost('/api/agendamentos/', dados),
+    atualizar: (id, dados) => apiPut(`/api/agendamentos/${id}`, dados),
+    excluir: (id) => apiDelete(`/api/agendamentos/${id}`),
+    estatisticas: () => apiGet('/api/agendamentos/stats/resumo')
+};
 
-    buscarPorId: (id) => {
-        return apiGet(`/api/agendamentos/${id}`);
-    },
-    
-    criar: (dados) => {
-        return apiPost('/api/agendamentos/', dados);
-    },
-    
-    atualizar: (id, dados) => {
-        return apiPut(`/api/agendamentos/${id}`, dados);
-    },
-    
-    excluir: (id) => {
-        return apiDelete(`/api/agendamentos/${id}`);
-    },
-    
-    estatisticas: () => {
-        return apiGet('/api/agendamentos/stats/resumo');
-    }
+export const authApi = {
+    login: (dados) => apiPost('/api/auth/login', dados),
+    logout: () => apiPost('/api/auth/logout'),
+    me: () => apiGet('/api/auth/me'),
 };
