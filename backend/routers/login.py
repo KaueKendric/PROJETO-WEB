@@ -70,23 +70,3 @@ async def check_auth():
 async def login_with_slash(login_data: LoginRequest):
     return await login(login_data)
 
-@router.post("/seed/admin")
-def seed_admin(db: Session = Depends(get_db)):
-    from backend.utils.auth import hash_senha
-    from backend.database import models
-
-    ja_existe = db.query(models.Funcionario).filter_by(usuario="admin").first()
-    if ja_existe:
-        return {"message": "Usuário admin já existe."}
-
-    admin = models.Funcionario(
-        nome="Administrador",
-        usuario="admin",
-        senha=hash_senha("123456"),
-        email="admin@admin.com",
-        tipo="admin",
-        ativo=True
-    )
-    db.add(admin)
-    db.commit()
-    return {"message": "Usuário admin criado com sucesso."}
