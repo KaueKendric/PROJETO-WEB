@@ -150,5 +150,5 @@ npm run dev
 
 ---
 
-✍ **Autor:** *Seu nome ou equipe*  
+✍ **Autor:** Kaue Kendric Loureiro da Costa  
 📅 **Versão:** 1.0.0
