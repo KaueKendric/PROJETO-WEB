@@ -25,6 +25,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "https://projeto-web-liard.vercel.app",
+        "https://projeto-86h5om35i-kaue-kendrics-projects.vercel.app", 
     ],
     allow_credentials=True,
     allow_methods=["*"],
