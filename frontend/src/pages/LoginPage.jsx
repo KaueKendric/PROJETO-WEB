@@ -319,7 +319,7 @@ function LoginPage({ onLogin }) {
                 <div className="relative flex items-center justify-center gap-3 font-bold text-white text-lg">
                   {isLoading ? (
                     <>
-                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full !animate-spin"></div>
                       <span>Entrando...</span>
                     </>
                   ) : (
