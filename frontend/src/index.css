@@ -15,6 +15,28 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+input.hide-decrement {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input.hide-decrement::-webkit-inner-spin-button,
+input.hide-decrement::-webkit-outer-spin-button {
+  display: none;
+}
+
+/* Esconde spinners nativos */
+.hide-number-spin {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.hide-number-spin::-webkit-outer-spin-button,
+.hide-number-spin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+
 
 @media (prefers-color-scheme: light) {
   :root {

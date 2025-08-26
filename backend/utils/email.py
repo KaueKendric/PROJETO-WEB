@@ -27,7 +27,7 @@ def enviar_email_background(
 ):
 
     html_content = render_template(template_name, context)
-    print("🔎 Conteúdo HTML renderizado:")
+    print("Conteúdo HTML renderizado:")
     print(html_content)
     background_tasks.add_task(enviar_email, destinatario, assunto, html_content)
     
@@ -48,4 +48,4 @@ def enviar_email(destinatario: str, assunto: str, html_content: str):
             smtp.send_message(msg)
         print(f"E-mail enviado com sucesso para: {destinatario}")
     except Exception as e:
-        print("❌ Erro ao enviar e-mail:", str(e))
+        print("Erro ao enviar e-mail:", str(e))

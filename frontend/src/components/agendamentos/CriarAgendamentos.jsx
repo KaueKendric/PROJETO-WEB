@@ -10,8 +10,11 @@ function CriarAgendamento() {
     local: '',
     descricao: '',
     participantes: [],
-    tipo: 'reuniao' 
+    tipo: 'reuniao',
+    valor: '',
+    concluido: false
   });
+
 
   const [cadastros, setCadastros] = useState([]);
   const [carregandoCadastros, setCarregandoCadastros] = useState(true);
@@ -34,36 +37,36 @@ function CriarAgendamento() {
     const fetchCadastros = async () => {
       try {
         console.log('🔍 Buscando cadastros para participantes...');
-        
+
         const response = await fetchApi('/api/cadastros/?limit=50&skip=0');
         console.log("Resposta da API cadastros:", response);
-        
+
         if (!response) {
           throw new Error('Erro ao buscar cadastros');
         }
-        
+
         if (response.cadastros && Array.isArray(response.cadastros)) {
           console.log('✅ Estrutura nova detectada:', response.cadastros.length, 'cadastros');
           setCadastros(response.cadastros);
-        } 
+        }
         else if (Array.isArray(response)) {
           console.log('✅ Estrutura antiga detectada:', response.length, 'cadastros');
           setCadastros(response);
-        } 
+        }
         else {
           console.error('❌ Estrutura de resposta inesperada:', response);
           setCadastros([]);
-          setMensagem({ 
-            tipo: 'erro', 
-            texto: 'Formato de resposta inesperado da API de cadastros' 
+          setMensagem({
+            tipo: 'erro',
+            texto: 'Formato de resposta inesperado da API de cadastros'
           });
         }
-        
+
       } catch (error) {
         console.error('❌ Erro ao buscar cadastros:', error);
-        setMensagem({ 
-          tipo: 'erro', 
-          texto: 'Erro ao carregar lista de pessoas cadastradas: ' + error.message 
+        setMensagem({
+          tipo: 'erro',
+          texto: 'Erro ao carregar lista de pessoas cadastradas: ' + error.message
         });
         setCadastros([]);
       } finally {
@@ -139,7 +142,6 @@ function CriarAgendamento() {
 
     setCarregandoSalvar(true);
     setMensagem({ tipo: '', texto: '' });
-
     try {
       const dadosAgendamento = {
         titulo: agendamento.titulo,
@@ -149,19 +151,21 @@ function CriarAgendamento() {
         descricao: agendamento.descricao,
         participantes_ids: agendamento.participantes.map(p => p.id),
         tipo_sessao: agendamento.tipo,
-        duracao_em_minutos: 60
+        duracao_em_minutos: 60,
+        valor: parseFloat(agendamento.valor),
+        concluido: agendamento.concluido
       };
 
       console.log('📤 Enviando agendamento:', dadosAgendamento);
 
-      const response = await fetchApi('/api/agendamentos/', { 
+      const response = await fetchApi('/api/agendamentos/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(dadosAgendamento)
       });
-      
+
       console.log("Resposta agendamentos:", response);
 
       if (!response) {
@@ -179,7 +183,9 @@ function CriarAgendamento() {
         local: '',
         descricao: '',
         participantes: [],
-        tipo: 'reuniao'
+        tipo: 'reuniao',
+        valor: '',
+        concluido: false
       });
 
     } catch (error) {
@@ -241,11 +247,10 @@ function CriarAgendamento() {
                 key={tipo.value}
                 type="button"
                 onClick={() => handleInputChange('tipo', tipo.value)}
-                className={`p-3 rounded-xl border transition-all duration-300 flex flex-col items-center gap-2 ${
-                  agendamento.tipo === tipo.value
-                    ? 'bg-green-500/20 border-green-400/50 text-green-300'
-                    : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20'
-                }`}
+                className={`p-3 rounded-xl border transition-all duration-300 flex flex-col items-center gap-2 ${agendamento.tipo === tipo.value
+                  ? 'bg-green-500/20 border-green-400/50 text-green-300'
+                  : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20'
+                  }`}
               >
                 <span className="text-2xl">{tipo.icon}</span>
                 <span className="text-sm font-medium">{tipo.label}</span>
@@ -297,6 +302,80 @@ function CriarAgendamento() {
             className="w-full px-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:ring-2 focus:ring-green-400/50 focus:outline-none transition-all duration-300 placeholder-white/40 backdrop-blur-sm"
           />
         </div>
+        {/* Valor */}
+        <div className="mb-4">
+          <label htmlFor="valor" className="block text-sm font-medium text-white mb-1">
+            Valor (R$)
+          </label>
+
+          <div className="flex items-stretch gap-2">
+            {/* Botão - (some/desabilita quando valor <= 0) */}
+            <button
+              type="button"
+              onClick={() =>
+                setAgendamento(prev => ({ ...prev, valor: Math.max(0, Number(prev.valor || 0) - 1).toFixed(2) }))
+              }
+              disabled={Number(agendamento.valor || 0) <= 0}
+              className={`px-3 rounded-lg border-2 ${Number(agendamento.valor || 0) <= 0
+                ? 'opacity-40 cursor-not-allowed border-slate-700 bg-slate-800 text-slate-400'
+                : 'border-slate-700 bg-slate-900 hover:bg-slate-800 text-white'
+                }`}
+              aria-label="Diminuir valor"
+              title="Diminuir valor"
+            >
+              –
+            </button>
+
+            {/* Input numérico controlado (sem setas nativas) */}
+            <input
+              id="valor"
+              type="number"
+              name='valor'
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              pattern="[0-9]+([.,][0-9]{1,2})?"
+              className="hide-number-spin w-full px-4 py-2 rounded-lg border-2 bg-slate-900 text-white border-slate-700 focus:ring-2 focus:ring-green-500 focus:outline-none"
+              value={agendamento.valor}
+              onChange={(e) => {
+                // Normaliza vírgula para ponto e impede negativos
+                const raw = e.target.value.replace(',', '.');
+                const n = parseFloat(raw);
+                setAgendamento(prev => ({
+                  ...prev,
+                  valor: raw === '' || isNaN(n) ? '' : Math.max(0, n)
+                }));
+              }}
+              onWheel={(e) => e.currentTarget.blur()} // bloqueia scroll mudar valor
+              onKeyDown={(e) => {
+                // bloqueia seta para baixo se valor <= 0
+                if (e.key === 'ArrowDown' && Number(agendamento.valor || 0) <= 0) {
+                  e.preventDefault();
+                }
+                // impede sinal de menos
+                if (e.key === '-' || e.key === 'Subtract') {
+                  e.preventDefault();
+                }
+              }}
+              placeholder="Ex: 150,00"
+            />
+
+            {/* Botão + */}
+            <button
+              type="button"
+              onClick={() =>
+                setAgendamento(prev => ({ ...prev, valor: (Number(prev.valor || 0) + 1).toFixed(2) }))
+              }
+              className="px-3 rounded-lg border-2 border-slate-700 bg-slate-900 hover:bg-slate-800 text-white"
+              aria-label="Aumentar valor"
+              title="Aumentar valor"
+            >
+              +
+            </button>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">Use vírgula ou ponto para centavos. Não permite negativo.</p>
+        </div>
+
 
         {/* Participantes */}
         <div>
@@ -304,7 +383,6 @@ function CriarAgendamento() {
             <Users size={16} className="inline mr-2" />
             Participantes
           </label>
-
           {/* Status dos cadastros */}
           {carregandoCadastros && (
             <div className="mb-3 p-3 bg-blue-500/20 border border-blue-400/30 rounded-xl text-blue-300 text-sm">

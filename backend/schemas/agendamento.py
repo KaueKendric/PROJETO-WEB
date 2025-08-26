@@ -11,12 +11,19 @@ class AgendamentoCreate(BaseModel):
     participantes_ids: List[int] = Field(default=[], description="Lista de IDs dos participantes")
     tipo_sessao: Optional[str] = Field(default="reuniao", description="Tipo da sessão")
     duracao_em_minutos: Optional[int] = Field(default=60, ge=1, le=1440, description="Duração em minutos")
+    valor: Optional[float] = Field(default=None, ge=0, description="Valor do agendamento")
+    concluido: Optional[bool] = Field(default=False, description="Se foi concluído")
+
+
+
 
 class ParticipanteResponse(BaseModel):
     id: int
     nome: str
     email: str
     telefone: Optional[str] = None
+    
+
     
     class Config:
         from_attributes = True
@@ -34,6 +41,11 @@ class AgendamentoResponse(BaseModel):
     data_criacao: datetime
     data_atualizacao: datetime
     participantes: List[ParticipanteResponse] = []
+    valor: Optional[float] = None
+    concluido: Optional[bool] = False
+
+
+
     
     class Config:
         from_attributes = True
@@ -46,7 +58,9 @@ class AgendamentoList(BaseModel):
     status: str
     local: Optional[str] = None
     participantes_count: int = 0
-    
+    valor: Optional[float] = None
+    concluido: Optional[bool] = False
+
     class Config:
         from_attributes = True
 
@@ -60,6 +74,12 @@ class AgendamentoUpdate(BaseModel):
     tipo_sessao: Optional[str] = None
     duracao_em_minutos: Optional[int] = Field(None, ge=1, le=1440)
     status: Optional[str] = None
+    valor: Optional[float] = Field(None, ge=0)
+    concluido: Optional[bool] = None
+
+
+
+
 
 class AgendamentoPaginado(BaseModel):
     """Schema para resposta paginada de agendamentos"""

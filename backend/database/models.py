@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Table, Boolean, Date, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Table, Boolean, Date, Text, Float, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from backend.database.database import Base
@@ -59,6 +59,8 @@ class Agendamento(Base):
     profissional_responsavel_id = Column(Integer, ForeignKey("funcionarios.id"))
     data_criacao = Column(DateTime, default=func.now())
     data_atualizacao = Column(DateTime, default=func.now(), onupdate=func.now())
+    valor = Column(Float, nullable=True) 
+    concluido = Column(Boolean, default=False)
 
     cadastro = relationship("Cadastro", back_populates="agendamentos")
     funcionario = relationship("Funcionario", back_populates="agendamentos")

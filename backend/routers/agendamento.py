@@ -86,6 +86,8 @@ async def listar_agendamentos(
                     "observacoes": agendamento.observacoes,
                     "duracao_em_minutos": agendamento.duracao_em_minutos,
                     "local": agendamento.local,
+                    "valor": agendamento.valor,              
+                    "concluido": agendamento.concluido,      
                     "participantes": participantes,
                     "data_criacao": agendamento.data_criacao.isoformat() if agendamento.data_criacao else None,
                     "data_atualizacao": agendamento.data_atualizacao.isoformat() if agendamento.data_atualizacao else None,
@@ -93,6 +95,7 @@ async def listar_agendamentos(
                     "duracao_formatada": agendamento.duracao_formatada,
                     "status_cor": agendamento.status_cor
                 }
+
                 agendamentos_processados.append(agendamento_dict)
                 
             except Exception as e:
@@ -106,6 +109,8 @@ async def listar_agendamentos(
                     "observacoes": getattr(agendamento, 'observacoes', None),
                     "duracao_em_minutos": getattr(agendamento, 'duracao_em_minutos', 60),
                     "local": getattr(agendamento, 'local', None),
+                    "valor": getattr(agendamento, 'valor', None),
+                    "concluido": getattr(agendamento, 'concluido', False),
                     "participantes": [],
                     "participantes_count": 0,
                     "error": f"Erro ao processar: {str(e)}"
@@ -178,7 +183,7 @@ def aplicar_filtros_agendamento(query, count_query, filtro: str):
 async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     
     try:
-        print(f"Dados recebidos para criação: {agendamento_data.dict()}")
+        print(f"Dados recebidos para criação: {agendamento_data}")
         
        
         try:
@@ -196,8 +201,11 @@ async def criar_agendamento(agendamento_data: agendamento_schema.AgendamentoCrea
             status='agendado',
             observacoes=agendamento_data.descricao,
             duracao_em_minutos=agendamento_data.duracao_em_minutos,
-            local=agendamento_data.local
+            local=agendamento_data.local,
+            valor=agendamento_data.valor,
+            concluido=agendamento_data.concluido or False
         )
+    
         
         db.add(db_agendamento)
         db.flush()  

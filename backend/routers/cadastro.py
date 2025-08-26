@@ -151,7 +151,7 @@ async def criar_cadastro(
     cadastro: cadastro_schema.Cadastro, db: Session = Depends(get_db)
 ):
     try:
-        print(f"📝 Criando cadastro: {cadastro.nome}")
+        print(f"Criando cadastro: {cadastro.nome}")
 
         db_cadastro = models.Cadastro(**cadastro.model_dump())
         db.add(db_cadastro)

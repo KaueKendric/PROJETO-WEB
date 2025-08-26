@@ -94,7 +94,7 @@ function BuscarAgendamento() {
 
       if (isNumeric && searchTerm.trim()) {
 
-        console.log(`🔍 Buscando agendamento por ID: ${searchTerm.trim()}`);
+        console.log(` Buscando agendamento por ID: ${searchTerm.trim()}`);
         const response = await fetchApi(`/api/agendamentos/${searchTerm.trim()}`);
 
         if (response.status === 404) {
@@ -109,7 +109,7 @@ function BuscarAgendamento() {
         data = [agendamento];
       } else {
 
-        console.log(`🔍 Buscando agendamentos com filtros`);
+        console.log(` Buscando agendamentos com filtros`);
 
         let filtroAPI = '';
 
