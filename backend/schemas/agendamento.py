@@ -94,7 +94,7 @@ class AgendamentoPaginado(BaseModel):
     temAnterior: bool = Field(..., description="Tem página anterior")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "agendamentos": [
                     {
@@ -138,7 +138,7 @@ class AgendamentoStats(BaseModel):
     confirmados: int = Field(..., description="Status: confirmado")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "total": 150,
                 "hoje": 5,
@@ -175,7 +175,7 @@ class OperacaoResponse(BaseModel):
     success: bool = True
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "message": "Operação realizada com sucesso",
                 "id": 123,

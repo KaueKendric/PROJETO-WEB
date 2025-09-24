@@ -169,7 +169,7 @@ async def criar_cadastro(
 @router.put("/{cadastro_id}", response_model=cadastro_schema.Cadastro)
 async def atualizar_cadastro(
     cadastro_id: int,
-    cadastro_data: cadastro_schema.Cadastro,
+    cadastro_data: cadastro_schema.CadastroUpdate,
     db: Session = Depends(get_db),
 ):
     try:

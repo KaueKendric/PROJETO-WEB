@@ -11,7 +11,7 @@ function ListarAgendamentos() {
   const [agendamentoSelecionado, setAgendamentoSelecionado] = useState(null);
   
   // Estados para modal de confirmação
-  const [modalConfirmacao, setModalConfirmacao] = useState(null);
+  const [modalConfirmacao, setModalConfirmacao] = useState(false);
   const [processando, setProcessando] = useState(false);
   
   // Estado para dropdown de ações
@@ -258,7 +258,7 @@ function ListarAgendamentos() {
       setErro("Erro ao excluir agendamento");
     } finally {
       setProcessando(false);
-      setModalConfirmacao(null);
+      setModalConfirmacao(false);
       setMenuAberto(null);
     }
   };
@@ -616,7 +616,7 @@ function ListarAgendamentos() {
                     )}
                     {agendamento.valor && (
                       <div className="flex items-center gap-2 text-white/70">
-                        <span className="text-green-400 text-sm">💰</span>
+                        <DollarSign size={14} className="text-green-400" />
                         <span className="text-sm font-medium text-green-300">
                           {typeof agendamento.valor === 'number' 
                             ? `R$ ${agendamento.valor.toFixed(2).replace('.', ',')}` 
@@ -691,7 +691,7 @@ function ListarAgendamentos() {
 
       {/* Modal de Confirmação */}
       {modalConfirmacao && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[60]">
           <div className="bg-slate-800/95 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 max-w-md w-full shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle size={24} className="text-red-400" />
@@ -699,12 +699,12 @@ function ListarAgendamentos() {
             </div>
             
             <p className="text-white/80 mb-6">
-              {modalConfirmacao.mensagem}
+              {modalConfirmacao?.mensagem}
             </p>
             
             <div className="flex gap-3 justify-end">
               <button
-                onClick={() => setModalConfirmacao(null)}
+                onClick={() => setModalConfirmacao(false)}
                 disabled={processando}
                 className="px-4 py-2 rounded-xl bg-slate-700/80 hover:bg-slate-600/80 text-white font-medium transition-all duration-300 disabled:opacity-50"
               >
@@ -820,7 +820,7 @@ function ListarAgendamentos() {
               {agendamentoSelecionado.valor !== undefined && agendamentoSelecionado.valor !== null && (
                 <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-green-400">💰</span>
+                    <DollarSign size={20} className="text-green-400" />
                     <span className="text-white/60 text-sm font-medium">Valor</span>
                   </div>
                   <p className="text-white font-medium text-lg">R$ {parseFloat(agendamentoSelecionado.valor).toFixed(2)}</p>

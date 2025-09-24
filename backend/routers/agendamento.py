@@ -170,6 +170,10 @@ def aplicar_filtros_agendamento(query, count_query, filtro: str):
         filtro_condicao = models.Agendamento.status == "realizado"
     elif filtro == "cancelado":
         filtro_condicao = models.Agendamento.status == "cancelado"
+    elif filtro == "pendente":
+        filtro_condicao = models.Agendamento.concluido == False
+    elif filtro == "concluido":
+        filtro_condicao = models.Agendamento.concluido == True
     else: 
         filtro_condicao = None
     

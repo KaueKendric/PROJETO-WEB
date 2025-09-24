@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Mail, Phone, AlertCircle, Eye, X, Filter, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Mail, Phone, AlertCircle, Eye, X, Filter, Search, ChevronLeft, ChevronRight, Cake, MapPin, Edit, Trash2, Save } from 'lucide-react';
 import fetchApi from '../../utils/fetchApi';
 
 function ListaCadastro() {
@@ -8,6 +8,10 @@ function ListaCadastro() {
   const [erro, setErro] = useState('');
   const [cadastroSelecionado, setCadastroSelecionado] = useState(null);
   const [filtro, setFiltro] = useState('');
+  const [modalExcluir, setModalExcluir] = useState(null);
+  const [modalEditar, setModalEditar] = useState(null);
+  const [dadosEdicao, setDadosEdicao] = useState({});
+  const [processando, setProcessando] = useState(false);
 
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totalCadastros, setTotalCadastros] = useState(0);
@@ -147,6 +151,51 @@ function ListaCadastro() {
     return numeros;
   };
 
+  const handleExcluirCadastro = async (cadastroId) => {
+    setProcessando(true);
+    try {
+      await fetchApi(`/api/cadastros/${cadastroId}`, { method: 'DELETE' });
+      setModalExcluir(null);
+      setCadastroSelecionado(null);
+      // Refresh the list after deletion
+      fetchCadastros(1, ''); // Go back to first page and clear filter
+      setFiltro('');
+      setPaginaAtual(1);
+    } catch (err) {
+      setErro('Falha ao excluir cadastro: ' + err.message);
+      setModalExcluir(null); // Close modal on error too
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const handleAbrirModalEdicao = (cadastro) => {
+    setDadosEdicao({
+      ...cadastro,
+      data_nascimento: cadastro.data_nascimento ? cadastro.data_nascimento.split('T')[0] : '', // Format for date input
+    });
+    setModalEditar(cadastro);
+    setCadastroSelecionado(null); // Close details modal
+  };
+
+  const handleSalvarEdicao = async () => {
+    setProcessando(true);
+    try {
+      const { id, data_criacao, data_atualizacao, ...dadosParaEnviar } = dadosEdicao;
+      await fetchApi(`/api/cadastros/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosParaEnviar),
+      });
+      setModalEditar(null);
+      fetchCadastros(paginaAtual, filtro); // Refresh list
+    } catch (err) {
+      setErro('Falha ao salvar alterações: ' + err.message);
+    } finally {
+      setProcessando(false);
+    }
+  };
+
   if (erro) {
     return (
       <div className="w-full">
@@ -263,15 +312,18 @@ function ListaCadastro() {
                   </div>
 
                   {cadastro.data_nascimento && (
-                    <div className="text-white/60 text-sm">
-                      <span className="font-medium">Nascimento:</span> {formatarData(cadastro.data_nascimento)}
+                    <div className="flex items-center gap-3 text-white/80">
+                      <Cake size={16} className="text-pink-400 flex-shrink-0" />
+                      <span className="text-sm">
+                        {formatarData(cadastro.data_nascimento)}
+                      </span>
                     </div>
                   )}
 
                   {cadastro.endereco && (
-                    <div className="text-white/60 text-sm">
-                      <span className="font-medium">Endereço:</span>
-                      <span className="block truncate" title={cadastro.endereco}>
+                    <div className="flex items-center gap-3 text-white/80">
+                      <MapPin size={16} className="text-red-400 flex-shrink-0" />
+                      <span className="text-sm truncate" title={cadastro.endereco}>
                         {cadastro.endereco}
                       </span>
                     </div>
@@ -355,6 +407,47 @@ function ListaCadastro() {
         </div>
       )}
 
+      {/* Modal de Exclusão */}
+      {modalExcluir && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+          <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl max-w-md w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle size={24} className="text-red-400" />
+              <h3 className="text-xl font-bold text-white">Confirmar Exclusão</h3>
+            </div>
+            <p className="text-white/80 mb-6">
+              Tem certeza que deseja excluir o cadastro de <span className="font-bold text-purple-300">{modalExcluir.nome}</span>? Essa ação não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setModalExcluir(null)}
+                disabled={processando}
+                className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleExcluirCadastro(modalExcluir.id)}
+                disabled={processando}
+                className="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {processando ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    Excluir
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de detalhes - Otimizado para viewport */}
       {cadastroSelecionado && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
@@ -400,7 +493,7 @@ function ListaCadastro() {
                   {cadastroSelecionado.data_nascimento && (
                     <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
                       <div className="flex items-center gap-3 mb-2">
-                        <Users size={20} className="text-blue-400" />
+                        <Cake size={20} className="text-pink-400" />
                         <span className="text-slate-300 text-sm font-medium">Data de Nascimento</span>
                       </div>
                       <p className="text-white font-medium">{formatarData(cadastroSelecionado.data_nascimento)}</p>
@@ -422,7 +515,7 @@ function ListaCadastro() {
                   {cadastroSelecionado.endereco && (
                     <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 md:col-span-2">
                       <div className="flex items-center gap-3 mb-2">
-                        <Mail size={20} className="text-yellow-400" />
+                        <MapPin size={20} className="text-red-400" />
                         <span className="text-slate-300 text-sm font-medium">Endereço</span>
                       </div>
                       <p className="text-white font-medium">{cadastroSelecionado.endereco}</p>
@@ -440,11 +533,101 @@ function ListaCadastro() {
               >
                 Fechar
               </button>
-              <button className="py-3 px-6 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all duration-300">
+              <button
+                onClick={() => handleAbrirModalEdicao(cadastroSelecionado)}
+                className="py-3 px-6 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <Edit size={18} />
                 Editar
               </button>
-              <button className="py-3 px-6 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-all duration-300">
+              <button
+                onClick={() => setModalExcluir(cadastroSelecionado)}
+                className="py-3 px-6 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <Trash2 size={18} />
                 Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edição */}
+      {modalEditar && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border-2 border-slate-700 shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-700">
+              <h3 className="text-2xl font-bold text-white">Editar Cadastro</h3>
+              <button
+                onClick={() => setModalEditar(null)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all duration-300"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <form className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Nome Completo</label>
+                  <input
+                    type="text"
+                    value={dadosEdicao.nome || ''}
+                    onChange={(e) => setDadosEdicao({ ...dadosEdicao, nome: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={dadosEdicao.email || ''}
+                    onChange={(e) => setDadosEdicao({ ...dadosEdicao, email: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Telefone</label>
+                  <input
+                    type="tel"
+                    value={dadosEdicao.telefone || ''}
+                    onChange={(e) => setDadosEdicao({ ...dadosEdicao, telefone: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Data de Nascimento</label>
+                  <input
+                    type="date"
+                    value={dadosEdicao.data_nascimento || ''}
+                    onChange={(e) => setDadosEdicao({ ...dadosEdicao, data_nascimento: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Endereço</label>
+                  <textarea
+                    value={dadosEdicao.endereco || ''}
+                    onChange={(e) => setDadosEdicao({ ...dadosEdicao, endereco: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                    rows="3"
+                  />
+                </div>
+              </form>
+            </div>
+            <div className="flex gap-3 p-6 border-t border-slate-700">
+              <button
+                onClick={() => setModalEditar(null)}
+                disabled={processando}
+                className="flex-1 py-3 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium transition-all duration-300 border border-slate-700 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSalvarEdicao}
+                disabled={processando}
+                className="py-3 px-6 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {processando ? 'Salvando...' : <><Save size={18} /> Salvar</>}
               </button>
             </div>
           </div>
