@@ -3,6 +3,14 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from backend.database.database import Base
 
+
+class user(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True),
+    email = Column(String, unique=True, nullable=False, index=True),
+    password = Column(String, nullable=False)
+    
+
 agendamento_participantes = Table(
     'agendamento_participantes',
     Base.metadata,
